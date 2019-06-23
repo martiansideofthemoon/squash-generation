@@ -6,6 +6,10 @@ This is the official repository accompanying the ACL 2019 long paper *[Generatin
 
 The training dataset for the question generation module can be found [here](https://drive.google.com/open?id=1FlVtPgyBiJIEOIecnNLH3cg0EbKkK0Z4). This dataset contains QA from three reading comprehension datasets (SQuAD, CoQA and QuAC) labelled according to their conceptual category (as described in Table 1 of the paper). In addition, we have also provided the scheme that was adopted to label each question (hand labelling, rule-based templates or classifier. The distribution has been provided in Table A1 of the paper). These labels are finer than the classes used to train the models and contain an extra class (`verification`) for yes/no questions. The mapping to the coarse `general` and `specific` categories has been provided in [`src/dataloader.py`](https://github.com/martiansideofthemoon/squash-generation/blob/master/src/dataloader.py#L11-L19).
 
+#### Schema
+
+A detailed schema for the original dataset has been provided in [`data/specificity_qa_dataset/README.md`](https://github.com/martiansideofthemoon/squash-generation/blob/master/data/specificity_qa_dataset/README.md).
+
 #### Preprocessing Instructions
 
 During preprocessing, we remove generic, unanswerable, multi-paragraph and `verification` questions. Since coreferences in questions are common for the QuAC and CoQA datasets, we have an additional preprocessed version which resolves all the coreferences in the question statements.

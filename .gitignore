@@ -1,0 +1,11 @@
+runs
+data/*.pkl
+data/cache_*
+data/high_low
+logs
+qa_model/save_base
+qa_model/save_large
+*.pyc
+*.pyo
+squash/final
+squash/temp

@@ -8,6 +8,6 @@
 #SBATCH --mem=370GB
 #SBATCH -d singleton
 
-cd /mnt/nfs/work1/miyyer/kalpesh/projects/squash-generation/data
+cd /mnt/nfs/work1/miyyer/kalpesh/projects/squash-generation
 
-python normalize_dataset_corefs.py
+python data/filter_dataset_corefs.py

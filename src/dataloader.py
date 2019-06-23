@@ -9,19 +9,17 @@ from torch.utils.data import Dataset
 logger = logging.getLogger(__file__)
 
 class_map = {
-    'overview': 'general',
     'causal': 'general',
     'judgemental': 'general',
     'instrumental': 'general',
     'general': 'general',
     'general_concept_completion': 'general',
-    'conceptual': 'specific',
     'specific': 'specific',
     'specific_concept_completion': 'specific'
 }
 
 
-def get_dataset(tokenizer, dataset_cache, path='data/instances', split='train'):
+def get_dataset(tokenizer, dataset_cache, path='data/temp_dataset/instances', split='train'):
     # Load question data
     dataset_cache = dataset_cache + '_' + split + '_' + type(tokenizer).__name__  # Do avoid using GPT cache for GPT-2 and vice-versa
     if dataset_cache and os.path.isfile(dataset_cache):
@@ -29,7 +27,7 @@ def get_dataset(tokenizer, dataset_cache, path='data/instances', split='train'):
         data = torch.load(dataset_cache)
         return data
 
-    dataset_path = "%s_%s.pkl" % (path, split)
+    dataset_path = "%s_%s.pickle" % (path, split)
     data = get_dataset_from_file(tokenizer, file=dataset_path)
 
     if dataset_cache:

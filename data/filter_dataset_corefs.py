@@ -1,3 +1,6 @@
+"""Fork from the data/filter_dataset.py file. In addition to filtering the raw dataset,
+this script resolves unresolvable coreferences from the questions (very common in QuAC and CoQA)"""
+
 import pickle
 import unicodedata
 import re
@@ -14,21 +17,11 @@ from blacklist import black_list, black_list_patterns
 
 
 DOWNSAMPLE_THRESHOLD = 10
-
-
-def get_word(text, location):
-    """Identify the word at this location"""
-    reverse_text = text[::-1]
-    reverse_location = len(text) - location - 1
-    try:
-        start_index = len(text) - reverse_text.index(' ', reverse_location)
-    except:
-        start_index = 0
-    try:
-        end_index = text.index(' ', location)
-    except:
-        end_index = len(text)
-    return text[start_index:end_index]
+# Make sure your machine has atleast NUM_PROCESSES CPU cores
+NUM_PROCESSES = 48
+# Each chunk is processed batch-wise by Spacy.
+# Higher chunk sizes lead to faster pre-processing but an unresponsive progressbar
+CHUNK_SIZE = 5
 
 
 # Turn a Unicode string to plain ASCII, thanks to
@@ -38,11 +31,6 @@ def unicode_to_ascii(s):
         c for c in unicodedata.normalize('NFD', s)
         if unicodedata.category(c) != 'Mn'
     )
-
-
-def process(ip):
-    output = ip.replace('"', '').replace('\'', '').strip()
-    return output
 
 
 # Lowercase, trim, and remove non-letter characters
@@ -61,6 +49,8 @@ def normalize_string(string):
 
 
 def coref_worker(para_questions):
+    # https://github.com/explosion/spaCy/issues/1839#issuecomment-443227516
+    # Avoids serialization of the nlp object
     nlp = spacy.load('en')
     neuralcoref.add_to_pipe(nlp, blacklist=False)
 
@@ -80,6 +70,9 @@ def coref_worker(para_questions):
         new_question = []
         corefs_used = {}
 
+        # This loop runs over each token in the question and replaces unresolved corefs.
+        # Unresolved corefs are common in QuAC and CoQA.
+        # Corefs were also resolved in paragraphs in https://arxiv.org/abs/1805.05942 for question generation
         for token in question_span:
             if token._.in_coref is False or \
                token.pos_ not in ['PRON', 'DET'] or \
@@ -102,10 +95,8 @@ def coref_worker(para_questions):
 
 for corpus in ['train']:
     print("\nSplit = %s" % corpus)
-    with open('/mnt/nfs/work1/miyyer/kalpesh/projects/squash-generation/data/high_low/quac_coqa_%s.pickle' % corpus, 'rb') as f:
+    with open('data/specificity_qa_dataset/quac_coqa_%s.pickle' % corpus, 'rb') as f:
         data = pickle.load(f)
-
-    instances = []
 
     partial_answers = 0
     zero_length_answers = 0
@@ -114,7 +105,7 @@ for corpus in ['train']:
 
     all_para_text = []
     all_para_questions = []
-    all_high_low = []
+    all_conceptual_category = []
     all_answer = []
 
     for instance in tqdm(data):
@@ -122,22 +113,27 @@ for corpus in ['train']:
         for para_num, para in enumerate(instance['paragraphs']):
 
             for qa in para['qas']:
+
                 # Remove answers spanning multiple paragraphs for now
                 if qa['partial'] != '(FULL)':
                     partial_answers += 1
                     continue
+
                 # Remove answers which won't have any tokens after normalization
                 if normalize_string(qa['answer']) == "":
                     zero_length_answers += 1
                     continue
 
+                # Remove generic questions which have exact matches in the blacklist
                 if qa['question'].lower() in black_list:
                     black_listed += 1
                     continue
 
-                if qa['high_low'] == 'verification':
+                # Remove verification questions as they cannot be reliably mapped to a specificity
+                if qa['conceptual_category'] == 'verification':
                     continue
 
+                # Remove generic questions with regex matches in the blacklist
                 pattern_match_found = False
                 for pattern in black_list_patterns:
                     if len(re.findall(pattern, qa['question'].lower())) > 0:
@@ -147,44 +143,41 @@ for corpus in ['train']:
                     black_listed += 1
                     continue
 
+                # Concatenate paragraph with question with a separator token for coreference resolution in question
                 current_para_text = ' '.join([x['text'] for x in instance['paragraphs'][:para_num + 1]])
                 para_question = current_para_text.strip() + " ~ " + qa['question'].strip()
 
                 all_para_text.append(para['text'].strip())
                 all_para_questions.append(para_question)
-                all_high_low.append(qa['high_low'])
+                all_conceptual_category.append(qa['conceptual_category'])
                 all_answer.append(qa['answer'].strip())
 
-    num_processes = 48
-    chunk_size = 5
-    pool = Pool(processes=num_processes)
+    pool = Pool(processes=NUM_PROCESSES)
 
     # chunk questions into blocks of chunk_size
     all_para_questions_chunked = []
-    for i in range(0, len(all_para_questions), chunk_size):
-        all_para_questions_chunked.append(all_para_questions[i:i + chunk_size])
+    for i in range(0, len(all_para_questions), CHUNK_SIZE):
+        all_para_questions_chunked.append(all_para_questions[i:i + CHUNK_SIZE])
 
+    # send each chunk to the coreference resolution worker
     all_questions_chunked = []
     for chunks in tqdm(pool.imap(coref_worker, all_para_questions_chunked), total=len(all_para_questions_chunked)):
         all_questions_chunked.append(
             chunks
         )
 
+    # collapse the processed chunk list into a single list
     all_questions_chunked = [y for x in all_questions_chunked for y in x]
 
-    for para_text, question_chunked, high_low, answer in zip(all_para_text, all_questions_chunked, all_high_low, all_answer):
+    instances = []
+
+    for pt, qc, cc, ans in zip(all_para_text, all_questions_chunked, all_conceptual_category, all_answer):
         instances.append({
-            'paragraph': para_text,
-            'question': question_chunked,
-            'class': high_low,
-            'answer': answer
+            'paragraph': pt,
+            'question': qc,
+            'class': cc,
+            'answer': ans
         })
-
-    # inst_num += 1
-
-    # if inst_num % 1000 == 0:
-    #     with open('instances_corefs_%s_temp.pkl' % corpus, 'wb') as f:
-    #         pickle.dump(instances, f)
 
     print("%d multi-paragraph answers in %s data filtered out" % (partial_answers, corpus))
     print("%d zero length answers in %s data filtered out" % (zero_length_answers, corpus))
@@ -195,6 +188,7 @@ for corpus in ['train']:
 
     counter_qa = Counter([inst['question'] for inst in instances])
 
+    # Downsample the generic questions not captured in the blacklist
     frequent_questions = {}
     for k, v in counter_qa.items():
         if v > DOWNSAMPLE_THRESHOLD:
@@ -215,5 +209,5 @@ for corpus in ['train']:
     counter_qa = Counter([inst['question'] for inst in filtered_instances])
     print(Counter([v for k, v in counter_qa.items()]))
 
-    with open('instances_corefs_%s.pkl' % corpus, 'wb') as f:
+    with open('data/temp_dataset/instances_corefs_%s.pickle' % corpus, 'wb') as f:
         pickle.dump(filtered_instances, f)

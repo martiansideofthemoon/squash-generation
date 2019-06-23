@@ -10,5 +10,5 @@
 
 cd /mnt/nfs/work1/miyyer/kalpesh/projects/squash-generation
 
-python -m torch.distributed.launch --nproc_per_node=4 src/train.py --n_epochs 5 --dataset_path data/instances_corefs --dataset_cache data/cache_corefs
+python -m torch.distributed.launch --nproc_per_node=4 src/train.py --n_epochs 5 --dataset_path data/temp_dataset/instances_corefs --dataset_cache data/temp_dataset/cache_corefs
 

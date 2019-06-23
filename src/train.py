@@ -1,5 +1,7 @@
-# Copyright (c) 2019-present, HuggingFace Inc.
-# All rights reserved. This source code is licensed under the BSD-style license found in the LICENSE file in the root directory of this source tree.
+# Copyright (c) 2019-present
+# Original codebase written by HuggingFace Inc. (https://github.com/huggingface/transfer-learning-conv-ai)
+# Forked and modified by Kalpesh Krishna (http://martiansideofthemoon.github.io/)
+
 import os
 import math
 import logging
@@ -15,14 +17,15 @@ from ignite.handlers import ModelCheckpoint
 from ignite.metrics import Accuracy, Loss, MetricsLambda, RunningAverage
 from ignite.contrib.handlers import ProgressBar, PiecewiseLinear
 from ignite.contrib.handlers.tensorboard_logger import TensorboardLogger, OutputHandler, OptimizerParamsHandler
-from pytorch_pretrained_bert import (OpenAIAdam, OpenAIGPTLMHeadModel, OpenAIGPTDoubleHeadsModel, OpenAIGPTTokenizer,
-                                     GPT2LMHeadModel, GPT2DoubleHeadsModel, GPT2Tokenizer, WEIGHTS_NAME, CONFIG_NAME)
+from pytorch_pretrained_bert import (OpenAIAdam, OpenAIGPTLMHeadModel, OpenAIGPTTokenizer,
+                                     GPT2LMHeadModel, GPT2Tokenizer, WEIGHTS_NAME, CONFIG_NAME)
 
 from arguments import parser
 from dataloader import get_dataset
 
 SPECIAL_TOKENS = [
-    "<bos>", "<eos>", "<paragraph>", "<answer-general>", "<answer-specific>", "<question-general>", "<question-specific>", "<pad>"
+    "<bos>", "<eos>", "<paragraph>", "<answer-general>", "<answer-specific>",
+    "<question-general>", "<question-specific>", "<pad>"
 ]
 MODEL_INPUTS = ["input_ids", "lm_labels", "token_type_ids"]
 

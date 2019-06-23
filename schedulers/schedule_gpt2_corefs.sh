@@ -10,6 +10,6 @@
 
 cd /mnt/nfs/work1/miyyer/kalpesh/projects/squash-generation
 
-python -m torch.distributed.launch --nproc_per_node=4 src/train.py --eval_before_start --n_epochs 5 --model_checkpoint gpt2 --dataset_path data/instances_corefs --dataset_cache data/cache_corefs
+python -m torch.distributed.launch --nproc_per_node=4 src/train.py --eval_before_start --n_epochs 5 --model_checkpoint gpt2 --dataset_path data/temp_dataset/instances_corefs --dataset_cache data/temp_dataset/cache_corefs
 
 

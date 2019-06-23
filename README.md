@@ -34,7 +34,11 @@ During preprocessing, we remove generic, unanswerable, multi-paragraph and `veri
 
 #### Labelling Custom QA Datasets
 
-We used the rules outlined in `data/question_rules.py` to carry out the rule-based labelling of questions. The classifier code was a simple 1-layer CNN built on top of ELMo embeddings (built using [allenai/allennlp](https://github.com/allenai/allennlp)) trained on hand-labelled questions. A simple way to emulate this would be using [notebook](https://colab.research.google.com/drive/1Qvw5AJbcZXcPrkwM2nQp5zV00eM1aj0j) after modifying the `DatasetReader`. The original codebase will be added soon!
+We used the rules outlined in `data/question_rules.py` to carry out the rule-based labelling of questions. The classifier code was a simple 1-layer CNN built on top of ELMo embeddings (built using [allenai/allennlp](https://github.com/allenai/allennlp)) trained on hand-labelled questions. The code-base to classify questions has been added to `data/question-classifier`. Run `python main.py` to train the classifier. You could use the `python main.py --mode classify` to classify new QA datasets. The corresponding dataset can be found under the `classifier` folder in the same Google Drive [link](https://drive.google.com/drive/folders/1FlVtPgyBiJIEOIecnNLH3cg0EbKkK0Z4?usp=sharing). Place the train and dev data in `data/question-classifier`.
+
+Note that the classifier codebase is not production ready, so it might be a bit confusing and might require modifications. (For instance, `general` questions are named `overview` and `specific` questions as `conceptual`).
+
+You could alternatively try out BERT encoders using this [notebook](https://colab.research.google.com/drive/1Qvw5AJbcZXcPrkwM2nQp5zV00eM1aj0j) after modifying the `DatasetReader`.
 
 ## Question Generation
 

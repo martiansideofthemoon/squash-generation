@@ -7,6 +7,10 @@ parser.add_argument(
     help="Path of the train/dev split in the dataset. Default files are instances_train.pickle, instances_dev.pickle."
 )
 parser.add_argument(
+    "--output_dir", type=str, default=None,
+    help="Output directory to store tensorboard logs and saved models."
+)
+parser.add_argument(
     "--dataset_cache", type=str, default="data/temp_dataset/cache",
     help="Path to store the dataset caches. There is a different cache for GPT and GPT2"
 )

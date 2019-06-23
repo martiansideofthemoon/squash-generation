@@ -12,3 +12,7 @@ squash/final
 squash/temp
 *.pkl
 *.pickle
+question-generation/gpt2_corefs_question_generation
+question-generation/gpt_corefs_question_generation
+question-generation/gpt2_question_generation
+question-generation/gpt_question_generation

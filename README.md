@@ -36,7 +36,7 @@ During preprocessing, we remove generic, unanswerable, multi-paragraph and `veri
 
 We used the rules outlined in `data/question_rules.py` to carry out the rule-based labelling of questions. The classifier code was a simple 1-layer CNN built on top of ELMo embeddings (built using [allenai/allennlp](https://github.com/allenai/allennlp)) trained on hand-labelled questions. The code-base to classify questions has been added to `data/question-classifier`. Run `python main.py` to train the classifier. You could use the `python main.py --mode classify` to classify new QA datasets. The corresponding dataset can be found under the `classifier` folder in the same Google Drive [link](https://drive.google.com/drive/folders/1FlVtPgyBiJIEOIecnNLH3cg0EbKkK0Z4?usp=sharing). Place the train and dev data in `data/question-classifier`.
 
-Note that the classifier codebase is not production ready, so it might be a bit confusing and might require modifications. (For instance, `general` questions are named `overview` and `specific` questions as `conceptual`).
+Note that the classifier codebase is not production ready, so it might be a bit confusing and require modifications. (For instance, `general` questions are named `overview` and `specific` questions as `conceptual`).
 
 You could alternatively try out BERT encoders using this [notebook](https://colab.research.google.com/drive/1Qvw5AJbcZXcPrkwM2nQp5zV00eM1aj0j) after modifying the `DatasetReader`.
 
@@ -60,7 +60,7 @@ The codebase for the question generation module can be found under `question-gen
 
 Since training the question generation model tends to be resource and time intensive, a pre-trained question generation model with the `schedulers/schedule_gpt2_corefs.sh` configuration has been released [here](https://drive.google.com/drive/folders/1HEbm_sHDAAcylKIF4vIvZ9N2jEA7I5Em?usp=sharing).
 
-Extract the pre-trained question generation model in the folder `runs/gpt2_coref_question_generation`.
+Extract the pre-trained question generation model in the folder `question-generation/gpt2_corefs_question_generation`.
 
 ## Question Answering
 
@@ -77,7 +77,7 @@ Extract the pre-trained QA model in the folder `question-answering/bert_large_qa
 
 ## SQUASHing
 
-Once the question generation and question answering modules have been trained, run `squash/pipeline.sh` to choose an arbitary development set example from QuAC and SQUASH it. You might need to modify the model checkpoint directories for the question generation or question answering module. The output document will be available in `squash/final/`.
+Once the question generation and question answering modules have been trained, run `squash/pipeline.sh` to choose an arbitary development set example from QuAC and SQUASH it. You might need to modify the model checkpoint directories for the question generation or question answering module. The output document will be available in `squash/final/`. Individual file descriptions have been added to [`squash/README.md`](https://github.com/martiansideofthemoon/squash-generation/blob/master/question-generation/README.md).
 
 For custom input, write a file `squash/temp/input.txt` with your custom input (paragraphs separated by new lines) and `squash/temp/instance.txt` with a input ID (used to write the output file). Then run `squash/pipeline_custom.sh`.
 

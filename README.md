@@ -32,6 +32,10 @@ During preprocessing, we remove generic, unanswerable, multi-paragraph and `veri
 
 2. Run a filtering cycle using `python data/filter_dataset.py` to carry out standard filtering. Alternatively, you could run `python data/filter_dataset_corefs.py` to resolve coreferences in the questions in addition to filtering. Resolving coreferences can be resource and time intensive so you could use the preprocessed versions in the Google Drive link instead as described above.
 
+#### Labelling Custom QA Datasets
+
+We used the rules outlined in `data/question_rules.py` to carry out the rule-based labelling of questions. The classifier code was a simple 1-layer CNN built on top of ELMo embeddings (built using [allenai/allennlp](https://github.com/allenai/allennlp)) trained on hand-labelled questions. A simple way to emulate this would be using [notebook](https://colab.research.google.com/drive/1Qvw5AJbcZXcPrkwM2nQp5zV00eM1aj0j) after modifying the `DatasetReader`. The original codebase will be added soon!
+
 ## Question Generation
 
 Our conditional question generation model is forked from [huggingface/transfer-learning-conv-ai](https://github.com/huggingface/transfer-learning-conv-ai). We generate conditional questions using a language model which is fine-tuned from OpenAI's GPT or GPT2. We convert our training data as follows,

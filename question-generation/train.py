@@ -50,7 +50,12 @@ def pad_dataset(dataset, padding=0):
 
 
 def build_input_from_segments(data_point, tokenizer, with_eos=True):
-    """ Build a sequence of input from 3 segments: persona, history and last reply """
+    """ Build a sequence of input.
+    1. For `general` questions,
+        `<bos> .. paragraph text .. <answer-general> .. answer span .. <question-general> .. question span .. <eos>`
+    2. For `specific` questions,
+        `<bos> .. paragraph text .. <answer-specific> .. answer span .. <question-specific> .. question span .. <eos>`.
+    """
     bos, eos, paragraph, answer_general, answer_specific, question_general, question_specific = \
         tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS[:-1])
 

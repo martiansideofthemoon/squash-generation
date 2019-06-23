@@ -4,8 +4,8 @@ data/high_low
 data/specificity_qa_dataset
 data/temp_dataset
 logs
-qa_model/save_base
-qa_model/save_large
+question-answering/bert_large_qa_model
+question-answering/bert_base_qa_model
 *.pyc
 *.pyo
 squash/final

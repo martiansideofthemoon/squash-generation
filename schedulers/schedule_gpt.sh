@@ -10,5 +10,5 @@
 
 cd /mnt/nfs/work1/miyyer/kalpesh/projects/squash-generation
 
-python -m torch.distributed.launch --nproc_per_node=4 src/train.py --n_epochs 5
+python -m torch.distributed.launch --nproc_per_node=4 question-generation/train.py --n_epochs 5
 

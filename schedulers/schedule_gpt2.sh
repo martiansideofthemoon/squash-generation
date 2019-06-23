@@ -10,5 +10,5 @@
 
 cd /mnt/nfs/work1/miyyer/kalpesh/projects/squash-generation
 
-python -m torch.distributed.launch --nproc_per_node=4 src/train.py --eval_before_start --n_epochs 5 --model_checkpoint gpt2
+python -m torch.distributed.launch --nproc_per_node=4 question-generation/train.py --eval_before_start --n_epochs 5 --model_checkpoint gpt2
 

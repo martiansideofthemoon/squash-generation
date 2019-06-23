@@ -12,7 +12,7 @@ cd /mnt/nfs/work1/miyyer/kalpesh/projects/squash-generation
 
 export SQUAD_DIR=/mnt/nfs/work1/miyyer/datasets/SQuAD
 
-python qa_model/run_squad.py \
+python question-answering/run_squad.py \
   --bert_model bert-large-uncased \
   --do_train \
   --do_predict \
@@ -24,5 +24,5 @@ python qa_model/run_squad.py \
   --num_train_epochs 2.0 \
   --max_seq_length 384 \
   --doc_stride 128 \
-  --output_dir qa_model/save_large \
+  --output_dir question-answering/bert_large_qa_model \
   --version_2_with_negative

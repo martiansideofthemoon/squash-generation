@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 #SBATCH --job-name=job_doc2qa
-#SBATCH -o /mnt/nfs/work1/miyyer/kalpesh/projects/qa-generation/logs/log_doc2qa.txt
+#SBATCH -o /mnt/nfs/work1/miyyer/kalpesh/projects/squash-generation/logs/log_doc2qa.txt
 #SBATCH --time=24:00:00
 #SBATCH --partition=1080ti-long
 #SBATCH --gres=gpu:1
@@ -10,15 +10,9 @@
 #SBATCH --open-mode append
 #SBATCH -d singleton
 
-dataset=combined_class3
-export SQUAD_DIR=/mnt/nfs/work1/miyyer/datasets/SQuAD
-
-
-for var in {1..10}
+for var in {1..1}
 do
 	echo "Run $var ..."
-	# assume input in doc2qa/input.txt in the form of a set of paragraphs
-	# alternatively, we can populate the file with a random input from the dev set
 	echo 'Choosing instance from QuAC dev set ...'
 	python squash/populate_input.py
 
@@ -26,14 +20,14 @@ do
 	python squash/extract_answers.py
 
 	echo 'Generating questions ...'
-	python src/interact.py \
-		--model_checkpoint runs/May26_09-29-23_node009 \
+	python question-generation/interact.py \
+		--model_checkpoint runs/gpt2_coref_question_generation \
 		--filename squash/temp/input.pkl \
 		--model_type gpt2
 
 	echo 'Running QA module ...'
-	python qa_model/run_squad.py \
-		--bert_model qa_model/save_large \
+	python question-answering/run_squad.py \
+		--bert_model question-answering//bert_large_qa_model \
 		--do_predict \
 		--do_lower_case \
 		--predict_file squash/temp/generated_questions.json \

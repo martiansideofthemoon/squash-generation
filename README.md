@@ -2,6 +2,10 @@
 
 This is the official repository accompanying the ACL 2019 long paper *[Generating Question-Answer Hierarchies](https://arxiv.org/abs/1906.02622)*. This repository contains the accompanying dataset and codebase. The code for the demo website can be found [here](https://github.com/martiansideofthemoon/squash-website).
 
+The codebase in this repository contains a modified and improved version of the original codebase and tries to leverage language model pretraining in all its modules. The question generation module is a transformer-based model based off of GPT-2 which has been forked from [huggingface/transfer-learning-conv-ai](http://github.com/huggingface/transfer-learning-conv-ai). The question answering module is a BERT-based SQUAD 2.0 model forked from [huggingface/pytorch-pretrained-BERT](https://github.com/huggingface/pytorch-pretrained-BERT). Finally, the filtering has been greatly simplified and can be easily customized based on user preferences.
+
+A technical note on the modified system will be added soon!
+
 ## Requirements
 
 Create a new Python 3.6 virtual environment. Run the following,
@@ -12,7 +16,7 @@ Create a new Python 3.6 virtual environment. Run the following,
 
 ## Dataset
 
-The training dataset for the question generation module can be found [here](https://drive.google.com/open?id=1FlVtPgyBiJIEOIecnNLH3cg0EbKkK0Z4). This dataset contains QA from three reading comprehension datasets (SQuAD, CoQA and QuAC) labelled according to their conceptual category (as described in Table 1 of the paper). In addition, we have also provided the scheme that was adopted to label each question (hand labelling, rule-based templates or classifier. The distribution has been provided in Table A1 of the paper). These labels are finer than the classes used to train the models and contain an extra class (`verification`) for yes/no questions. The mapping to the coarse `general` and `specific` categories has been provided in [`src/dataloader.py`](https://github.com/martiansideofthemoon/squash-generation/blob/master/src/dataloader.py#L11-L19).
+The training dataset for the question generation module can be found [here](https://drive.google.com/open?id=1FlVtPgyBiJIEOIecnNLH3cg0EbKkK0Z4). This dataset contains QA from three reading comprehension datasets (SQuAD, CoQA and QuAC) labelled according to their conceptual category (as described in Table 1 of the paper). In addition, we have also provided the scheme that was adopted to label each question (hand labelling, rule-based templates or classifier. The distribution has been provided in Table A1 of the paper). These labels are finer than the classes used to train the models and contain an extra class (`verification`) for yes/no questions. The mapping to the coarse `general` and `specific` categories has been provided in [`question-generation/dataloader.py`](https://github.com/martiansideofthemoon/squash-generation/blob/master/question-generation/dataloader.py#L11-L19).
 
 #### Schema
 
@@ -30,9 +34,44 @@ During preprocessing, we remove generic, unanswerable, multi-paragraph and `veri
 
 ## Question Generation
 
+Our conditional question generation model is forked from [huggingface/transfer-learning-conv-ai](http://github.com/huggingface/transfer-learning-conv-ai). We generate conditional questions using a language model which is fine-tuned from OpenAI's GPT or GPT2. We convert our training data as follows,
+
+1. For `general` questions - `<bos> ... paragraph text ... <answer-general> ... answer span ... <question-general> ... question span ... <eos>`
+2. For `specific` questions - `<bos> ... paragraph text ... <answer-specific> ... answer span ... <question-specific> ... question span ... <eos>`.
+
+In addition, segmental embeddings are passed to the model (with specificity information) to provide a stronger signal about specificity of the question. A single language modelling objective is used to train the model optimized to minimize the loss on the question.
+
+The codebase for the question generation module can be found under `question-generation`. Individual file descriptions have been added to [`question-generation/README.md`](https://github.com/martiansideofthemoon/squash-generation/blob/master/question-generation/README.md).
+
+[Slurm](https://slurm.schedmd.com/documentation.html) scheduler scripts have been provided under the `schedulers` folder in four different configurations. These scripts are bash scripts which also run without slurm. You will need to modify the `cd` command in these scripts to ensure you are in the current folder.
+
+1. `schedulers/schedule_gpt.sh` - Fine-tune a question generation model starting from a pretrained GPT model.
+2. `schedulers/schedule_gpt2.sh` - Fine-tune a question generation model starting from a pretrained GPT-2 model.
+3. `schedulers/schedule_gpt_corefs.sh` - Fine-tune a question generation model on coref resolved data starting from a pretrained GPT model.
+4. `schedulers/schedule_gpt2_corefs.sh` - Fine-tune a question generation model on coref resolved data starting from a pretrained GPT-2 model.
+
+Since training the question generation model tends to be resource and time intensive, a pre-trained question generation model has been released [here](https://drive.google.com/drive/folders/1HEbm_sHDAAcylKIF4vIvZ9N2jEA7I5Em?usp=sharing).
+
+Extract the pre-trained question generation model in the folder `runs/gpt2_coref_question_generation`.
+
 ## Question Answering
 
+Our question answering module is a BERT-based model trained on SQuAD 2.0, forked from [huggingface/pytorch-pretrained-BERT](https://github.com/huggingface/pytorch-pretrained-BERT). The codebase for the question answering module can be found under `question-answering`. Individual file descriptions have been added to [`question-answering/README.md`](https://github.com/martiansideofthemoon/squash-generation/blob/master/question-generation/README.md).
+
+[Slurm](https://slurm.schedmd.com/documentation.html) scheduler scripts have been provided under the `schedulers` folder in two different configurations. These scripts are bash scripts which also run without slurm. You will need to modify the `cd` command in these scripts to ensure you are in the current folder.
+
+1. `schedulers/schedule_squad_bert.sh` - Run a BERT-base model on SQuAD 2.0
+2. `schedulers/schedule_squad_bert_large.sh` - Run a BERT-large model on SQuAD 2.0
+
+Since training the QA model tends to be resource and time intensive, a pre-trained QA model has been released [here](https://drive.google.com/drive/folders/1D3fIPuwn0C0zIMg29QSKcnSAc8HfNemd?usp=sharing). This model gets an F1 score of 78.8 on the SQuAD 2.0 development set (the original BERT paper reports an F1 score of 81.9).
+
+Extract the pre-trained QA model in the folder `question-answering/bert_large_qa_model`.
+
 ## SQUASHing
+
+Once the question generation and question answering modules have been trained, run `squash/pipeline.sh` to choose an arbitary development set example from QuAC and SQUASH it. You might need to modify the model checkpoint directories for the question generation or question answering module. The output document will be available in `squash/final/`.
+
+For custom input, write a file `squash/temp/input.txt` with your custom input (paragraphs separated by new lines) and `squash/temp/instance.txt` with a input ID (used to write the output file). Then run `squash/pipeline_custom.sh`.
 
 ## Citation
 

@@ -140,6 +140,7 @@ def run():
         original_answer = tokenizer.decode(output['answer'], skip_special_tokens=True)
         para_index = inst['para_index']
 
+        # Output in a SQUAD-like format with questions clumped together under their parent paragraph
         if len(final_output_dict["data"][0]["paragraphs"]) > para_index:
             # verify whether the paragraph text is identical
             assert original_paragraph == final_output_dict["data"][0]["paragraphs"][para_index]['context']

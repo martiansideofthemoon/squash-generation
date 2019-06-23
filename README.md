@@ -2,7 +2,7 @@
 
 This is the official repository accompanying the ACL 2019 long paper *[Generating Question-Answer Hierarchies](https://arxiv.org/abs/1906.02622)*. This repository contains the accompanying dataset and codebase. The code for the demo website can be found [here](https://github.com/martiansideofthemoon/squash-website).
 
-The codebase in this repository contains a modified and improved version of the original codebase and tries to leverage language model pretraining in all its modules. The question generation module is a transformer-based model based off of GPT-2 which has been forked from [huggingface/transfer-learning-conv-ai](http://github.com/huggingface/transfer-learning-conv-ai). The question answering module is a BERT-based SQUAD 2.0 model forked from [huggingface/pytorch-pretrained-BERT](https://github.com/huggingface/pytorch-pretrained-BERT). Finally, the filtering has been greatly simplified and can be easily customized based on user preferences.
+The codebase in this repository contains a modified and improved version of the original codebase and tries to leverage language model pretraining in all its modules. The question generation module is a transformer-based model based off of GPT-2 which has been forked from [huggingface/transfer-learning-conv-ai](https://github.com/huggingface/transfer-learning-conv-ai). The question answering module is a BERT-based SQUAD 2.0 model forked from [huggingface/pytorch-pretrained-BERT](https://github.com/huggingface/pytorch-pretrained-BERT). Finally, the filtering has been greatly simplified and can be easily customized based on user preferences.
 
 A technical note on the modified system will be added soon!
 
@@ -16,7 +16,7 @@ Create a new Python 3.6 virtual environment. Run the following,
 
 ## Dataset
 
-The training dataset for the question generation module can be found [here](https://drive.google.com/open?id=1FlVtPgyBiJIEOIecnNLH3cg0EbKkK0Z4). This dataset contains QA from three reading comprehension datasets (SQuAD, CoQA and QuAC) labelled according to their conceptual category (as described in Table 1 of the paper). In addition, we have also provided the scheme that was adopted to label each question (hand labelling, rule-based templates or classifier. The distribution has been provided in Table A1 of the paper). These labels are finer than the classes used to train the models and contain an extra class (`verification`) for yes/no questions. The mapping to the coarse `general` and `specific` categories has been provided in [`question-generation/dataloader.py`](https://github.com/martiansideofthemoon/squash-generation/blob/master/question-generation/dataloader.py#L11-L19).
+The training dataset for the question generation module can be found [here](https://drive.google.com/drive/folders/1FlVtPgyBiJIEOIecnNLH3cg0EbKkK0Z4?usp=sharing). This dataset contains QA from three reading comprehension datasets (SQuAD, CoQA and QuAC) labelled according to their conceptual category (as described in Table 1 of the paper). In addition, we have also provided the scheme that was adopted to label each question (hand labelling, rule-based templates or classifier. The distribution has been provided in Table A1 of the paper). These labels are finer than the classes used to train the models and contain an extra class (`verification`) for yes/no questions. The mapping to the coarse `general` and `specific` categories has been provided in [`question-generation/dataloader.py`](https://github.com/martiansideofthemoon/squash-generation/blob/master/question-generation/dataloader.py#L11-L19).
 
 #### Schema
 
@@ -26,15 +26,15 @@ A detailed schema for the original dataset has been provided in [`data/specifici
 
 During preprocessing, we remove generic, unanswerable, multi-paragraph and `verification` questions. Since coreferences in questions are common for the QuAC and CoQA datasets, we have an additional preprocessed version which resolves all the coreferences in the question statements.
 
-0. Preprocessed versions of the dataset can be found in the Google Drive link. `instances_train.pickle` and `instances_dev.pickle` contain the standard filtered datasets. `instances_corefs_train.pickle` and `instances_corefs_dev.pickle` contain filtered datasets with question coreferences resolved. Place these files inside `data/temp_dataset`.
+0. Preprocessed versions of the dataset can be found in the same Google Drive [link](https://drive.google.com/drive/folders/1FlVtPgyBiJIEOIecnNLH3cg0EbKkK0Z4?usp=sharing). `instances_train.pickle` and `instances_dev.pickle` contain the standard filtered datasets. `instances_corefs_train.pickle` and `instances_corefs_dev.pickle` contain filtered datasets with question coreferences resolved. Place these files inside `data/temp_dataset`.
 
-1. Download `train.pickle` and `dev.pickle` from the Google Drive link and place it in `data/specificity_qa_dataset`.
+1. Download `train.pickle` and `dev.pickle` from the Google Drive [link](https://drive.google.com/drive/folders/1FlVtPgyBiJIEOIecnNLH3cg0EbKkK0Z4?usp=sharing) and place it in `data/specificity_qa_dataset`.
 
 2. Run a filtering cycle using `python data/filter_dataset.py` to carry out standard filtering. Alternatively, you could run `python data/filter_dataset_corefs.py` to resolve coreferences in the questions in addition to filtering. Resolving coreferences can be resource and time intensive so you could use the preprocessed versions in the Google Drive link instead as described above.
 
 ## Question Generation
 
-Our conditional question generation model is forked from [huggingface/transfer-learning-conv-ai](http://github.com/huggingface/transfer-learning-conv-ai). We generate conditional questions using a language model which is fine-tuned from OpenAI's GPT or GPT2. We convert our training data as follows,
+Our conditional question generation model is forked from [huggingface/transfer-learning-conv-ai](https://github.com/huggingface/transfer-learning-conv-ai). We generate conditional questions using a language model which is fine-tuned from OpenAI's GPT or GPT2. We convert our training data as follows,
 
 1. For `general` questions - `<bos> ... paragraph text ... <answer-general> ... answer span ... <question-general> ... question span ... <eos>`
 2. For `specific` questions - `<bos> ... paragraph text ... <answer-specific> ... answer span ... <question-specific> ... question span ... <eos>`.
@@ -50,7 +50,7 @@ The codebase for the question generation module can be found under `question-gen
 3. `schedulers/schedule_gpt_corefs.sh` - Fine-tune a question generation model on coref resolved data starting from a pretrained GPT model.
 4. `schedulers/schedule_gpt2_corefs.sh` - Fine-tune a question generation model on coref resolved data starting from a pretrained GPT-2 model.
 
-Since training the question generation model tends to be resource and time intensive, a pre-trained question generation model has been released [here](https://drive.google.com/drive/folders/1HEbm_sHDAAcylKIF4vIvZ9N2jEA7I5Em?usp=sharing).
+Since training the question generation model tends to be resource and time intensive, a pre-trained question generation model with the `schedulers/schedule_gpt2_corefs.sh` configuration has been released [here](https://drive.google.com/drive/folders/1HEbm_sHDAAcylKIF4vIvZ9N2jEA7I5Em?usp=sharing).
 
 Extract the pre-trained question generation model in the folder `runs/gpt2_coref_question_generation`.
 
@@ -63,7 +63,7 @@ Our question answering module is a BERT-based model trained on SQuAD 2.0, forked
 1. `schedulers/schedule_squad_bert.sh` - Run a BERT-base model on SQuAD 2.0
 2. `schedulers/schedule_squad_bert_large.sh` - Run a BERT-large model on SQuAD 2.0
 
-Since training the QA model tends to be resource and time intensive, a pre-trained QA model has been released [here](https://drive.google.com/drive/folders/1D3fIPuwn0C0zIMg29QSKcnSAc8HfNemd?usp=sharing). This model gets an F1 score of 78.8 on the SQuAD 2.0 development set (the original BERT paper reports an F1 score of 81.9).
+Since training the QA model tends to be resource and time intensive, a pre-trained QA model using the `schedulers/schedule_squad_bert_large.sh` configuration has been released [here](https://drive.google.com/drive/folders/1D3fIPuwn0C0zIMg29QSKcnSAc8HfNemd?usp=sharing). This model gets an F1 score of 78.8 on the SQuAD 2.0 development set (the original BERT paper reports an F1 score of 81.9).
 
 Extract the pre-trained QA model in the folder `question-answering/bert_large_qa_model`.
 

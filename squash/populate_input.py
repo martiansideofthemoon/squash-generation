@@ -4,7 +4,7 @@ from random import randint
 
 dataset = 'quac'
 
-with open('data/high_low/quac_coqa_dev.pickle', 'rb') as f:
+with open('data/specificity_qa_dataset/dev.pickle', 'rb') as f:
     data = pickle.load(f)
 
 data = [x for x in data if x['dataset'] == dataset]

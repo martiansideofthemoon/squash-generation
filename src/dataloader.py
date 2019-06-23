@@ -14,8 +14,10 @@ class_map = {
     'judgemental': 'general',
     'instrumental': 'general',
     'general': 'general',
+    'general_concept_completion': 'general',
     'conceptual': 'specific',
-    'specific': 'specific'
+    'specific': 'specific',
+    'specific_concept_completion': 'specific'
 }
 
 

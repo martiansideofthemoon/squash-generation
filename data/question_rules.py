@@ -7,7 +7,7 @@ from spacy.matcher import PhraseMatcher
 nlp = spacy.load('en_core_web_sm', disable=['ner'])
 
 
-def conceptual(question):
+def specific_concept_completion(question):
     first = question[0]
     return (
         first.text.lower() in ['when', 'where', 'who'] or
@@ -48,7 +48,7 @@ def verification(question):
     return first.pos_ == 'VERB'
 
 
-def overview(question):
+def general_concept_completion(question):
     if question[0].text.lower() == 'who' and \
        question[1].text.lower() in ['is', 'was'] and \
        (question[2].pos_ == 'PROPN' or question[2].text.lower() in ['he', 'she']) and \
@@ -71,12 +71,12 @@ def labeller(question):
             return 'judgemental'
         elif instrumental(question_nlp):
             return 'instrumental'
-        elif overview(question_nlp):
-            return 'overview'
+        elif general_concept_completion(question_nlp):
+            return 'general_concept_completion'
         elif causal(question_nlp):
             return 'causal'
-        elif conceptual(question_nlp):
-            return 'conceptual'
+        elif specific_concept_completion(question_nlp):
+            return 'specific_concept_completion'
         else:
             return 'none'
     except:

@@ -9,3 +9,5 @@ qa_model/save_large
 *.pyo
 squash/final
 squash/temp
+*.pkl
+*.pickle

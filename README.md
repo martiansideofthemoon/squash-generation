@@ -12,7 +12,7 @@ Create a new Python 3.6 virtual environment. Run the following,
 
 1. Install the requirements using `pip install -r requirements.txt`.
 
-2. Since the code uses a slightly modified version of [huggingface/pytorch-pretrained-BERT](https://github.com/huggingface/pytorch-pretrained-BERT), it needs to be installed locally. Run `cd pytorch-pretrained-BERT` followed by `pip install --editable .`.
+2. Since the code uses a slightly modified version of [huggingface/pytorch-pretrained-BERT](https://github.com/huggingface/pytorch-pretrained-BERT), it needs to be installed locally. Run `cd pytorch-pretrained-BERT` followed by `pip install --editable .`
 
 ## Dataset
 

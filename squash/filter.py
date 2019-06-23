@@ -157,13 +157,3 @@ for para in full_summary:
 
 with open('squash/final/%s.json' % (instance_key), 'w') as f:
     f.write(json.dumps(squash_output))
-
-# if os.path.exists('squash/final/all_summaries.pickle') is True:
-#     with open('squash/final/all_summaries.pickle', 'rb') as f:
-#         all_summaries_data = pickle.load(f)
-# else:
-#     all_summaries_data = {}
-
-# all_summaries_data[instance_key] = full_summary
-# with open('squash/final/all_summaries.pickle', 'wb') as f:
-#     pickle.dump(all_summaries_data, f)

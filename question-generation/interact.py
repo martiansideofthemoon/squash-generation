@@ -9,7 +9,7 @@ import tqdm
 from argparse import ArgumentParser
 from itertools import chain
 from pprint import pformat
-
+import copy
 import torch
 import torch.nn.functional as F
 
@@ -57,20 +57,26 @@ def top_filtering(logits, top_k=0, top_p=0.0, threshold=-float('Inf'), filter_va
     return logits
 
 
-def sample_sequence(inst, tokenizer, model, args):
+def sample_sequence(inst, tokenizer, model, args,past):
     special_tokens_ids = tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS)
     inst['original_question'] = inst['question']
     inst['question'] = []
+    inst['orig_paragraph'] = inst['paragraph']
+    inst['paragraph'] = []
     instance, _ = build_input_from_segments(inst, tokenizer, with_eos=False)
+    input_ids = torch.tensor(instance['input_ids'][1:],device=args.device).unsqueeze(0) #remove extra eos
+    token_type_ids = torch.tensor(instance['token_type_ids'][1:],device=args.device).unsqueeze(0)
     inst['original_context'] = instance['input_ids']
+    logits, past = model(input_ids, token_type_ids=token_type_ids,past=past)
+    token_type = instance['token_type_ids'][-1]
 
     for i in range(args.max_length):
-        instance, _ = build_input_from_segments(inst, tokenizer, with_eos=False)
+        #instance, _ = build_input_from_segments(inst, tokenizer, with_eos=False)
 
-        input_ids = torch.tensor(instance["input_ids"], device=args.device).unsqueeze(0)
-        token_type_ids = torch.tensor(instance["token_type_ids"], device=args.device).unsqueeze(0)
+        #input_ids = torch.tensor(instance["input_ids"], device=args.device).unsqueeze(0)
+        #token_type_ids = torch.tensor(instance["token_type_ids"], device=args.device).unsqueeze(0)
 
-        logits, _ = model(input_ids, token_type_ids=token_type_ids)
+        
 
         logits = logits[0, -1, :] / args.temperature
         logits = top_filtering(logits, top_k=args.top_k, top_p=args.top_p)
@@ -83,8 +89,12 @@ def sample_sequence(inst, tokenizer, model, args):
 
         if prev.item() in special_tokens_ids:
             break
-        inst['question'].append(prev.item())
 
+        input_ids = prev.unsqueeze(0)
+        token_type_ids = torch.tensor([token_type]).unsqueeze(0)
+        logits, past = model(input_ids, token_type_ids=token_type_ids,past=past)   
+        inst['question'].append(prev.item())
+    inst['paragraph'] = inst['orig_paragraph']
     return inst
 
 
@@ -131,14 +141,30 @@ def run():
         }]
     }
     question_number = 0
+    prev_para_index = None
+    past =None
+
     for inst in tqdm.tqdm(data):
         with torch.no_grad():
-            output = sample_sequence(inst, tokenizer, model, args)
+            para_index = inst['para_index']
+            if para_index != prev_para_index:
+                past  = None
+                instance1 = copy.deepcopy(inst)
+                instance1['question'] = []
+                instance1['ori_answer'] = instance1['answer']
+                instance1['answer'] = []
+                instance, _ = build_input_from_segments(inst, tokenizer, with_eos=False)
+                input_ids = torch.tensor(instance['input_ids'][:-2],device=args.device).unsqueeze(0) #remove extra eos
+                token_type_ids = torch.tensor(instance['token_type_ids'][:-2],device=args.device).unsqueeze(0)
+                _ , past = model(input_ids, token_type_ids=token_type_ids,past=past)
+
+            output = sample_sequence(inst, tokenizer, model, args,past)
 
         original_paragraph = tokenizer.decode(output['paragraph'])
         generated_question = tokenizer.decode(output['question'], skip_special_tokens=True)
         original_answer = tokenizer.decode(output['answer'], skip_special_tokens=True)
         para_index = inst['para_index']
+        prev_para_index = inst['para_index']
 
         # Output in a SQUAD-like format with questions clumped together under their parent paragraph
         if len(final_output_dict["data"][0]["paragraphs"]) > para_index:

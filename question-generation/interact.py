@@ -7,14 +7,13 @@ import logging
 import random
 import tqdm
 from argparse import ArgumentParser
-from itertools import chain
 from pprint import pformat
-
 import torch
 import torch.nn.functional as F
 
 from pytorch_pretrained_bert import OpenAIGPTLMHeadModel, OpenAIGPTTokenizer, GPT2LMHeadModel, GPT2Tokenizer
-from train import SPECIAL_TOKENS, build_input_from_segments
+from train import SPECIAL_TOKENS
+from train import build_para_only_input_from_segments, build_qa_only_input_from_segments
 from dataloader import get_dataset_from_file
 
 
@@ -57,20 +56,31 @@ def top_filtering(logits, top_k=0, top_p=0.0, threshold=-float('Inf'), filter_va
     return logits
 
 
-def sample_sequence(inst, tokenizer, model, args):
+def sample_sequence(inst, tokenizer, model, args, para_cache):
     special_tokens_ids = tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS)
     inst['original_question'] = inst['question']
     inst['question'] = []
-    instance, _ = build_input_from_segments(inst, tokenizer, with_eos=False)
-    inst['original_context'] = instance['input_ids']
+
+    # Ignore the paragraph while building the input instance and token type ids
+    instance, _ = build_qa_only_input_from_segments(inst, tokenizer, with_eos=False)
+    input_ids = torch.tensor(instance['input_ids'], device=args.device).unsqueeze(0)
+    token_type_ids = torch.tensor(instance['token_type_ids'], device=args.device).unsqueeze(0)
+
+    # Initialize the past using the paragraph cache hidden representations
+    past = para_cache["hidden_states"]
+
+    prev = None
+    # This will be either <question-general> or <question-specific>, used to create subsequent inputs
+    token_type = instance['token_type_ids'][-1]
 
     for i in range(args.max_length):
-        instance, _ = build_input_from_segments(inst, tokenizer, with_eos=False)
+        if i != 0:
+            # In the first step of decoding, we want to look at the entire answer
+            # In the subsequent steps, we can just cache the hidden representations from previous steps
+            input_ids = prev.unsqueeze(0)
+            token_type_ids = torch.tensor([token_type]).unsqueeze(0).to(args.device)
 
-        input_ids = torch.tensor(instance["input_ids"], device=args.device).unsqueeze(0)
-        token_type_ids = torch.tensor(instance["token_type_ids"], device=args.device).unsqueeze(0)
-
-        logits, _ = model(input_ids, token_type_ids=token_type_ids)
+        logits, past = model(input_ids, token_type_ids=token_type_ids, past=past)
 
         logits = logits[0, -1, :] / args.temperature
         logits = top_filtering(logits, top_k=args.top_k, top_p=args.top_p)
@@ -83,6 +93,7 @@ def sample_sequence(inst, tokenizer, model, args):
 
         if prev.item() in special_tokens_ids:
             break
+
         inst['question'].append(prev.item())
 
     return inst
@@ -92,7 +103,8 @@ def run():
     parser = ArgumentParser()
     parser.add_argument("--model_type", type=str, default="gpt", help="gpt or gpt2")
     parser.add_argument("--model_checkpoint", type=str, default="", help="Path, url or short name of the model")
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu", help="Device (cuda or cpu)")
+    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu",
+                        help="Device (cuda or cpu)")
     parser.add_argument("--filename", type=str, default="data/instances_dev.pkl", help="File to use for decoding")
     parser.add_argument("--no_sample", action='store_true', help="Set to use greedy decoding instead of sampling")
     parser.add_argument("--max_length", type=int, default=50, help="Maximum length of the output utterances")
@@ -100,7 +112,8 @@ def run():
     parser.add_argument("--seed", type=int, default=42, help="Seed")
     parser.add_argument("--temperature", type=int, default=0.7, help="Sampling softmax temperature")
     parser.add_argument("--top_k", type=int, default=0, help="Filter top-k tokens before sampling (<=0: no filtering)")
-    parser.add_argument("--top_p", type=float, default=0.9, help="Nucleus filtering (top-p) before sampling (<=0.0: no filtering)")
+    parser.add_argument("--top_p", type=float, default=0.9,
+                        help="Nucleus filtering (top-p) before sampling (<=0.0: no filtering)")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO)
@@ -131,14 +144,36 @@ def run():
         }]
     }
     question_number = 0
+
+    para_cache = {
+        "index": None,
+        "hidden_states": None
+    }
+
     for inst in tqdm.tqdm(data):
         with torch.no_grad():
-            output = sample_sequence(inst, tokenizer, model, args)
+            para_index = inst["para_index"]
+            # Questions from the same paragraph all appear together
+            # We can re-use the paragraph hidden representations for different questions in the same paragraph
+            if para_index != para_cache["index"]:
+                # Since we have moved to a new paragraph, generate its cache
+                para_cache["hidden_states"] = None
+                # Ignore the answer and question while building the input
+                instance, _ = build_para_only_input_from_segments(inst, tokenizer)
+                input_ids = torch.tensor(instance['input_ids'], device=args.device).unsqueeze(0)
+                token_type_ids = torch.tensor(instance['token_type_ids'], device=args.device).unsqueeze(0)
+
+                # Run a forward pass to generate the para caches
+                _, para_cache["hidden_states"] = model(input_ids, token_type_ids=token_type_ids)
+
+            # Sample a question using the paragraph cache
+            output = sample_sequence(inst, tokenizer, model, args, para_cache)
 
         original_paragraph = tokenizer.decode(output['paragraph'])
         generated_question = tokenizer.decode(output['question'], skip_special_tokens=True)
         original_answer = tokenizer.decode(output['answer'], skip_special_tokens=True)
         para_index = inst['para_index']
+        para_cache["index"] = inst['para_index']
 
         # Output in a SQUAD-like format with questions clumped together under their parent paragraph
         if len(final_output_dict["data"][0]["paragraphs"]) > para_index:

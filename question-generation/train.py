@@ -63,8 +63,6 @@ def build_input_from_segments(data_point, tokenizer, with_eos=True):
     curr_ans = data_point['answer']
     curr_ques = data_point['question']
 
-    instance = {}
-
     sequence = [bos] + curr_para
     token_types = [paragraph for _ in range(len(curr_para) + 1)]
     lm_labels = [-1 for _ in range(len(curr_para) + 1)]
@@ -100,9 +98,81 @@ def build_input_from_segments(data_point, tokenizer, with_eos=True):
     assert len(sequence) == len(token_types)
     assert len(token_types) == len(lm_labels)
 
-    instance["input_ids"] = sequence
-    instance["token_type_ids"] = token_types
-    instance["lm_labels"] = lm_labels
+    instance = {
+        "input_ids": sequence,
+        "token_type_ids": token_types,
+        "lm_labels": lm_labels
+    }
+    return instance, sequence
+
+
+def build_para_only_input_from_segments(data_point, tokenizer):
+    """A paragraph-only version of build_input_from_segments()."""
+    bos, eos, paragraph = tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS[:3])
+    curr_para = data_point['paragraph']
+    sequence = [bos] + curr_para
+    token_types = [paragraph for _ in range(len(curr_para) + 1)]
+    lm_labels = [-1 for _ in range(len(curr_para) + 1)]
+
+    assert len(sequence) == len(token_types)
+    assert len(token_types) == len(lm_labels)
+
+    instance = {
+        "input_ids": sequence,
+        "token_type_ids": token_types,
+        "lm_labels": lm_labels
+    }
+    return instance, sequence
+
+
+def build_qa_only_input_from_segments(data_point, tokenizer, with_eos=True):
+    """A QA-only version of build_input_from_segments()."""
+    bos, eos, paragraph, answer_general, answer_specific, question_general, question_specific = \
+        tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS[:-1])
+
+    curr_ans = data_point['answer']
+    curr_ques = data_point['question']
+
+    sequence = []
+    token_types = []
+    lm_labels = []
+
+    if data_point['class'] == 'general':
+        sequence.extend([answer_general] + curr_ans)
+        token_types.extend([answer_general for _ in range(len(curr_ans) + 1)])
+        lm_labels.extend([-1 for _ in range(len(curr_ans) + 1)])
+
+        if with_eos is True:
+            sequence.extend([question_general] + curr_ques + [eos])
+            token_types.extend([question_general for _ in range(len(curr_ques) + 2)])
+            lm_labels.extend([-1] + curr_ques + [eos])
+        else:
+            sequence.extend([question_general] + curr_ques)
+            token_types.extend([question_general for _ in range(len(curr_ques) + 1)])
+            lm_labels.extend([-1] + curr_ques)
+
+    elif data_point['class'] == 'specific':
+        sequence.extend([answer_specific] + curr_ans)
+        token_types.extend([answer_specific for _ in range(len(curr_ans) + 1)])
+        lm_labels.extend([-1 for _ in range(len(curr_ans) + 1)])
+
+        if with_eos is True:
+            sequence.extend([question_specific] + curr_ques + [eos])
+            token_types.extend([question_specific for _ in range(len(curr_ques) + 2)])
+            lm_labels.extend([-1] + curr_ques + [eos])
+        else:
+            sequence.extend([question_specific] + curr_ques)
+            token_types.extend([question_specific for _ in range(len(curr_ques) + 1)])
+            lm_labels.extend([-1] + curr_ques)
+
+    assert len(sequence) == len(token_types)
+    assert len(token_types) == len(lm_labels)
+
+    instance = {
+        "input_ids": sequence,
+        "token_type_ids": token_types,
+        "lm_labels": lm_labels
+    }
     return instance, sequence
 
 

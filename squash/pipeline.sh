@@ -32,6 +32,7 @@ do
 		--do_lower_case \
 		--predict_file squash/temp/generated_questions.json \
 		--output_dir squash/temp \
+		--predict_batch_size 16 \
 	  	--version_2_with_negative
 
 	 echo 'Combining Q and A ...'

@@ -20,7 +20,7 @@ The training dataset for the question generation module can be found [here](http
 
 #### Schema
 
-A detailed schema for the original dataset has been provided in [`data/specificity_qa_dataset/README.md`](specificity_qa_dataset/README.md).
+A detailed schema for the original dataset has been provided in [`data/specificity_qa_dataset/README.md`](data/specificity_qa_dataset/README.md).
 
 #### Preprocessing Instructions
 
@@ -64,7 +64,7 @@ Extract the pre-trained question generation model in the folder `question-genera
 
 ## Question Answering
 
-Our question answering module is a BERT-based model trained on SQuAD 2.0, forked from [huggingface/pytorch-pretrained-BERT](https://github.com/huggingface/pytorch-pretrained-BERT). The codebase for the question answering module can be found under `question-answering`. Individual file descriptions have been added to [`question-answering/README.md`](question-generation/README.md).
+Our question answering module is a BERT-based model trained on SQuAD 2.0, forked from [huggingface/pytorch-pretrained-BERT](https://github.com/huggingface/pytorch-pretrained-BERT). The codebase for the question answering module can be found under `question-answering`. Individual file descriptions have been added to [`question-answering/README.md`](question-answering/README.md).
 
 [Slurm](https://slurm.schedmd.com/documentation.html) scheduler scripts have been provided under the `schedulers` folder in two different configurations. These scripts are bash scripts which also run without slurm. You will need to modify the `cd` command in these scripts to ensure you are in the current folder.
 
@@ -77,7 +77,7 @@ Extract the pre-trained QA model in the folder `question-answering/bert_large_qa
 
 ## SQUASHing
 
-Once the question generation and question answering modules have been trained, run `squash/pipeline.sh` to choose an arbitary development set example from QuAC and SQUASH it. You might need to modify the model checkpoint directories for the question generation or question answering module. The output document will be available in `squash/final/`. Individual file descriptions have been added to [`squash/README.md`](question-generation/README.md).
+Once the question generation and question answering modules have been trained, run `squash/pipeline.sh` to choose an arbitary development set example from QuAC and SQUASH it. You might need to modify the model checkpoint directories for the question generation or question answering module. The output document will be available in `squash/final/`. Individual file descriptions have been added to [`squash/README.md`](squash/README.md).
 
 For custom inputs, make a folder `squash/temp/$KEY` where `$KEY` is a unique identifier. Additionally, you will need to create a `squash/temp/$KEY/metadata.json` file to specify the settings and input text. For an example, look at [`squash/temp/quac_869/metadata.json`](squash/temp/quac_869/metadata.json). Finally run `squash/pipeline_custom.sh $KEY`.
 

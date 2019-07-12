@@ -16,11 +16,11 @@ Create a new Python 3.6 virtual environment. Run the following,
 
 ## Dataset
 
-The training dataset for the question generation module can be found [here](https://drive.google.com/drive/folders/1FlVtPgyBiJIEOIecnNLH3cg0EbKkK0Z4?usp=sharing). This dataset contains QA from three reading comprehension datasets (SQuAD, CoQA and QuAC) labelled according to their conceptual category (as described in Table 1 of the paper). In addition, we have also provided the scheme that was adopted to label each question (hand labelling, rule-based templates or classifier. The distribution has been provided in Table A1 of the paper). These labels are finer than the classes used to train the models and contain an extra class (`verification`) for yes/no questions. The mapping to the coarse `general` and `specific` categories has been provided in [`question-generation/dataloader.py`](https://github.com/martiansideofthemoon/squash-generation/blob/master/question-generation/dataloader.py#L11-L19).
+The training dataset for the question generation module can be found [here](https://drive.google.com/drive/folders/1FlVtPgyBiJIEOIecnNLH3cg0EbKkK0Z4?usp=sharing). This dataset contains QA from three reading comprehension datasets (SQuAD, CoQA and QuAC) labelled according to their conceptual category (as described in Table 1 of the paper). In addition, we have also provided the scheme that was adopted to label each question (hand labelling, rule-based templates or classifier. The distribution has been provided in Table A1 of the paper). These labels are finer than the classes used to train the models and contain an extra class (`verification`) for yes/no questions. The mapping to the coarse `general` and `specific` categories has been provided in [`question-generation/dataloader.py`](question-generation/dataloader.py#L11-L19).
 
 #### Schema
 
-A detailed schema for the original dataset has been provided in [`data/specificity_qa_dataset/README.md`](https://github.com/martiansideofthemoon/squash-generation/blob/master/data/specificity_qa_dataset/README.md).
+A detailed schema for the original dataset has been provided in [`data/specificity_qa_dataset/README.md`](specificity_qa_dataset/README.md).
 
 #### Preprocessing Instructions
 
@@ -49,7 +49,7 @@ Our conditional question generation model is forked from [huggingface/transfer-l
 
 In addition, segmental embeddings are passed to the model (with specificity information) to provide a stronger signal about specificity of the question. A single language modelling objective is used to train the model optimized to minimize the loss on the question.
 
-The codebase for the question generation module can be found under `question-generation`. Individual file descriptions have been added to [`question-generation/README.md`](https://github.com/martiansideofthemoon/squash-generation/blob/master/question-generation/README.md).
+The codebase for the question generation module can be found under `question-generation`. Individual file descriptions have been added to [`question-generation/README.md`](question-generation/README.md).
 
 [Slurm](https://slurm.schedmd.com/documentation.html) scheduler scripts have been provided under the `schedulers` folder in four different configurations. These scripts are bash scripts which also run without slurm. You will need to modify the `cd` command in these scripts to ensure you are in the current folder.
 
@@ -64,7 +64,7 @@ Extract the pre-trained question generation model in the folder `question-genera
 
 ## Question Answering
 
-Our question answering module is a BERT-based model trained on SQuAD 2.0, forked from [huggingface/pytorch-pretrained-BERT](https://github.com/huggingface/pytorch-pretrained-BERT). The codebase for the question answering module can be found under `question-answering`. Individual file descriptions have been added to [`question-answering/README.md`](https://github.com/martiansideofthemoon/squash-generation/blob/master/question-generation/README.md).
+Our question answering module is a BERT-based model trained on SQuAD 2.0, forked from [huggingface/pytorch-pretrained-BERT](https://github.com/huggingface/pytorch-pretrained-BERT). The codebase for the question answering module can be found under `question-answering`. Individual file descriptions have been added to [`question-answering/README.md`](question-generation/README.md).
 
 [Slurm](https://slurm.schedmd.com/documentation.html) scheduler scripts have been provided under the `schedulers` folder in two different configurations. These scripts are bash scripts which also run without slurm. You will need to modify the `cd` command in these scripts to ensure you are in the current folder.
 
@@ -77,9 +77,9 @@ Extract the pre-trained QA model in the folder `question-answering/bert_large_qa
 
 ## SQUASHing
 
-Once the question generation and question answering modules have been trained, run `squash/pipeline.sh` to choose an arbitary development set example from QuAC and SQUASH it. You might need to modify the model checkpoint directories for the question generation or question answering module. The output document will be available in `squash/final/`. Individual file descriptions have been added to [`squash/README.md`](https://github.com/martiansideofthemoon/squash-generation/blob/master/question-generation/README.md).
+Once the question generation and question answering modules have been trained, run `squash/pipeline.sh` to choose an arbitary development set example from QuAC and SQUASH it. You might need to modify the model checkpoint directories for the question generation or question answering module. The output document will be available in `squash/final/`. Individual file descriptions have been added to [`squash/README.md`](question-generation/README.md).
 
-For custom inputs, make a folder `squash/temp/$KEY` where `$KEY` is a unique identifier. Additionally, you will need to create a `squash/temp/$KEY/metadata.json` file to specify the settings and input text. For an example, look at `squash/temp/quac_869/metadata.json`.
+For custom inputs, make a folder `squash/temp/$KEY` where `$KEY` is a unique identifier. Additionally, you will need to create a `squash/temp/$KEY/metadata.json` file to specify the settings and input text. For an example, look at [`squash/temp/quac_869/metadata.json`](squash/temp/quac_869/metadata.json). Finally run `squash/pipeline_custom.sh $KEY`.
 
 ## Citation
 

@@ -10,10 +10,16 @@
 #SBATCH --open-mode append
 #SBATCH -d singleton
 
-# You will need two files, `squash/temp/input.txt` with the input document and
-# `squash/temp/instance.txt` with a file ID.
+# You will need to make a new folder named squash/temp/$KEY
+# In the folder, you will need to insert a file, squash/temp/$KEY/metadata.json
+# To understand the format expected for this file, look at squash/temp/quac_869/metadata.json
+
+KEY=$1
+
+echo $KEY
+
 echo 'Extracting answers ...'
-python squash/extract_answers.py
+python squash/extract_answers.py --key $KEY
 
 echo 'Generating questions ...'
 python question-generation/interact.py \

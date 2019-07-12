@@ -79,7 +79,7 @@ Extract the pre-trained QA model in the folder `question-answering/bert_large_qa
 
 Once the question generation and question answering modules have been trained, run `squash/pipeline.sh` to choose an arbitary development set example from QuAC and SQUASH it. You might need to modify the model checkpoint directories for the question generation or question answering module. The output document will be available in `squash/final/`. Individual file descriptions have been added to [`squash/README.md`](https://github.com/martiansideofthemoon/squash-generation/blob/master/question-generation/README.md).
 
-For custom input, write a file `squash/temp/input.txt` with your custom input (paragraphs separated by new lines) and `squash/temp/instance.txt` with a input ID (used to write the output file). Then run `squash/pipeline_custom.sh`.
+For custom inputs, make a folder `squash/temp/$KEY` where `$KEY` is a unique identifier. Additionally, you will need to create a `squash/temp/$KEY/metadata.json` file to specify the settings and input text. For an example, look at `squash/temp/quac_869/metadata.json`.
 
 ## Citation
 

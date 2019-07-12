@@ -1,5 +1,14 @@
+import argparse
+import json
 import pickle
 import spacy
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument('--key', type=str, default=None,
+                    help='Input text file to use for extracting answers.')
+
+args = parser.parse_args()
 
 nlp = spacy.load('en_core_web_sm')
 
@@ -13,8 +22,8 @@ def get_answer_spans(para_text):
     candidates = sentences + non_sentences
     return candidates, sentences, non_sentences
 
-with open('squash/temp/input.txt', 'r') as f:
-    data = f.read().split('\n')
+with open('squash/temp/%s/metadata.json' % args.key, 'r') as f:
+    data = json.loads(f.read())['input_text'].split('\n')
 
 instances = []
 
@@ -55,5 +64,5 @@ for i, para in enumerate(data):
             'algorithm': 'specific_entity'
         })
 
-with open('squash/temp/input.pkl', 'wb') as f:
+with open('squash/temp/%s/input.pkl' % args.key, 'wb') as f:
     pickle.dump(instances, f)

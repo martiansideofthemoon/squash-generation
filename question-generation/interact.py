@@ -114,7 +114,20 @@ def run():
     parser.add_argument("--top_k", type=int, default=0, help="Filter top-k tokens before sampling (<=0: no filtering)")
     parser.add_argument("--top_p", type=float, default=0.9,
                         help="Nucleus filtering (top-p) before sampling (<=0.0: no filtering)")
+
+    # While using SQUASH in the pipeline mode, prefer using the --key flag
+    parser.add_argument("--key", type=str, default=None,
+                        help="Override the default settings if the key is set, used in pipeline mode")
     args = parser.parse_args()
+
+    if args.key is not None:
+        # Override some the filename and top_p default settings if args.key is set
+        # This is done when the question generation module is being used in the SQUASH pipeline mode
+        args.filename = "squash/temp/%s/input.pkl" % args.key
+
+        with open("squash/temp/%s/metadata.json" % args.key, "r") as f:
+            metadata = json.loads(f.read())
+        args.top_p = metadata["settings"]["top_p"]
 
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__file__)
@@ -210,7 +223,7 @@ def run():
 
         question_number += 1
 
-    with open("squash/temp/generated_questions.json", "w") as f:
+    with open("squash/temp/%s/generated_questions.json" % args.key, "w") as f:
         f.write(json.dumps(final_output_dict))
 
 

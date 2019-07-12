@@ -14,31 +14,32 @@ for var in {1..1}
 do
 	echo "Run $var ..."
 	echo 'Choosing instance from QuAC dev set ...'
-	python squash/populate_input.py
+	KEY=$(python squash/populate_input.py)
+	echo $KEY
 
 	echo 'Extracting answers ...'
-	python squash/extract_answers.py
+	python squash/extract_answers.py --key $KEY
 
 	echo 'Generating questions ...'
 	python question-generation/interact.py \
 		--model_checkpoint question-generation/gpt2_corefs_question_generation \
-		--filename squash/temp/input.pkl \
-		--model_type gpt2
+		--model_type gpt2 \
+		--key $KEY
 
 	echo 'Running QA module ...'
 	python question-answering/run_squad.py \
 		--bert_model question-answering//bert_large_qa_model \
 		--do_predict \
 		--do_lower_case \
-		--predict_file squash/temp/generated_questions.json \
-		--output_dir squash/temp \
+		--predict_file squash/temp/$KEY/generated_questions.json \
+		--output_dir squash/temp/$KEY \
 		--predict_batch_size 16 \
 	  	--version_2_with_negative
 
 	 echo 'Combining Q and A ...'
-	 python squash/combine_qa.py
+	 python squash/combine_qa.py --key $KEY
 
 	echo 'Filtering bad Q/As ...'
-	python squash/filter.py
+	python squash/filter.py --key $KEY
 
 done

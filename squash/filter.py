@@ -1,3 +1,4 @@
+import argparse
 import numpy as np
 import json
 import pickle
@@ -16,6 +17,13 @@ from squad_eval_utils import (
     precision_metric,
     normalize
 )
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument('--key', type=str, default=None,
+                    help='Key used to uniquely identify the files needed.')
+
+args = parser.parse_args()
 
 nlp = spacy.load('en_core_web_sm')
 
@@ -136,16 +144,22 @@ class Paragraph(object):
 
         return general_questions
 
-with open('squash/temp/final_qa_set.json', 'r') as f:
+with open('squash/temp/%s/final_qa_set.json' % args.key, 'r') as f:
     paras = json.loads(f.read())['data'][0]['paragraphs']
 
-with open('squash/temp/instance.txt', 'r') as f:
-    instance_key = f.read().strip()
+with open("squash/temp/%s/metadata.json" % args.key, "r") as f:
+    metadata = json.loads(f.read())
 
-full_summary = [Paragraph(para) for para in paras]
+filter_frac = {
+    "general_sent": metadata["settings"]["gen_frac"],
+    "specific_sent": metadata["settings"]["spec_frac"],
+    "specific_entity": metadata["settings"]["spec_frac"]
+}
+
+full_summary = [Paragraph(para, filter_frac=filter_frac) for para in paras]
 
 squash_output = {
-    'instance_key': instance_key,
+    'instance_key': args.key,
     'qa_tree': []
 }
 
@@ -155,5 +169,5 @@ for para in full_summary:
         'binned_qas': para.binned_qas
     })
 
-with open('squash/final/%s.json' % (instance_key), 'w') as f:
+with open('squash/final/%s.json' % args.key, 'w') as f:
     f.write(json.dumps(squash_output))

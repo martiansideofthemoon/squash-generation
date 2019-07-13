@@ -22,7 +22,8 @@ Finally, `paragraphs` breaks down each multi-paragraph instance and splits up th
 9. `paragraphs/<item>/qas/<item>/question` - Text for the question about the paragraph.
 10. `paragraphs/<item>/qas/<item>/answer` - Answer span for the question from the paragraph.
 11. `paragraphs/<item>/qas/<item>/qa_num` - Specifies the question number in the original dataset.
-12. `paragraphs/<item>/qas/<item>/ans_position` - Where does the answer span start in the original context? Ignored during preprocessing.
+12. `paragraphs/<item>/qas/<item>/global_ans_position` - Where does the answer span start in the original QuAC / CoQA context? (absent in SQUAD instances)
+13. `paragraphs/<item>/qas/<item>/local_ans_position` - Where does the answer span start in the current paragraph?
 13. `paragraphs/<item>/qas/<item>/partial` - Specifices whether the answer span is fully contained in the paragraph. If `(FULL)`, the answer is completely inside the paragraph. If `(PARTIAL)`, the answer spans multiple paragraphs. If `(UNANSWERED)`, the answer length was zero.
 14. `paragraphs/<item>/qas/<item>/conceptual_category` - The Lehnert 1978 conceptual category assigned by our labelling scheme. Can be `instrumental`, `causal`, `general_concept_completion`, `specific_concept_completion`, `verification`, `judgmental`. The mapping to `general` and `specific` has been discussed earlier in the README.
 15. `paragraphs/<item>/qas/<item>/labelling_scheme` - Labelling scheme used to annotate the conceptual category of this question. Can be `hand`, `rules` or `classifier`.

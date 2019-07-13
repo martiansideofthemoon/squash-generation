@@ -1,7 +1,6 @@
 import pickle
 import unicodedata
 import re
-import sys
 
 from collections import Counter
 
@@ -77,11 +76,14 @@ for corpus in ['train', 'dev']:
                     black_listed += 1
                     continue
 
+                assert para['text'][qa['local_ans_position']:qa['local_ans_position'] + len(qa['answer'])] == qa['answer']
+
                 instances.append({
-                    'paragraph': para['text'].strip(),
-                    'question': qa['question'].strip(),
+                    'paragraph': para['text'],
+                    'question': qa['question'],
                     'class': qa['conceptual_category'],
-                    'answer': qa['answer'].strip()
+                    'answer': qa['answer'],
+                    'answer_position': qa['local_ans_position']
                 })
 
     print("%d multi-paragraph answers in %s data filtered out" % (partial_answers, corpus))

@@ -95,7 +95,7 @@ def coref_worker(para_questions):
 
 for corpus in ['train']:
     print("\nSplit = %s" % corpus)
-    with open('data/specificity_qa_dataset/quac_coqa_%s.pickle' % corpus, 'rb') as f:
+    with open('data/specificity_qa_dataset/%s.pickle' % corpus, 'rb') as f:
         data = pickle.load(f)
 
     partial_answers = 0
@@ -107,6 +107,7 @@ for corpus in ['train']:
     all_para_questions = []
     all_conceptual_category = []
     all_answer = []
+    all_ans_positions = []
 
     for instance in tqdm(data):
 
@@ -143,14 +144,17 @@ for corpus in ['train']:
                     black_listed += 1
                     continue
 
+                assert para['text'][qa['local_ans_position']:qa['local_ans_position'] + len(qa['answer'])] == qa['answer']
+
                 # Concatenate paragraph with question with a separator token for coreference resolution in question
                 current_para_text = ' '.join([x['text'] for x in instance['paragraphs'][:para_num + 1]])
                 para_question = current_para_text.strip() + " ~ " + qa['question'].strip()
 
-                all_para_text.append(para['text'].strip())
+                all_para_text.append(para['text'])
                 all_para_questions.append(para_question)
                 all_conceptual_category.append(qa['conceptual_category'])
-                all_answer.append(qa['answer'].strip())
+                all_answer.append(qa['answer'])
+                all_ans_positions.append(qa['local_ans_position'])
 
     pool = Pool(processes=NUM_PROCESSES)
 
@@ -171,12 +175,13 @@ for corpus in ['train']:
 
     instances = []
 
-    for pt, qc, cc, ans in zip(all_para_text, all_questions_chunked, all_conceptual_category, all_answer):
+    for pt, qc, cc, ans, ans_pos in zip(all_para_text, all_questions_chunked, all_conceptual_category, all_answer, all_ans_positions):
         instances.append({
             'paragraph': pt,
             'question': qc,
             'class': cc,
-            'answer': ans
+            'answer': ans,
+            'answer_position': ans_pos
         })
 
     print("%d multi-paragraph answers in %s data filtered out" % (partial_answers, corpus))

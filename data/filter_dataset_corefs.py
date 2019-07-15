@@ -147,7 +147,12 @@ for corpus in ['train', 'dev']:
                 assert para['text'][qa['local_ans_position']:qa['local_ans_position'] + len(qa['answer'])] == qa['answer']
 
                 # Concatenate paragraph with question with a separator token for coreference resolution in question
-                current_para_text = ' '.join([x['text'] for x in instance['paragraphs'][:para_num + 1]])
+                # Since SQuAD instances are independently written per-paragraph, only look at current paragraph
+                if instance["dataset"] == "squad":
+                    current_para_text = para["text"]
+                else:
+                    current_para_text = ' '.join([x['text'] for x in instance['paragraphs'][:para_num + 1]])
+
                 para_question = current_para_text.strip() + " ~ " + qa['question'].strip()
 
                 all_para_text.append(para['text'])

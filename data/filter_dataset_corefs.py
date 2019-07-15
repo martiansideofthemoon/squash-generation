@@ -93,7 +93,7 @@ def coref_worker(para_questions):
     return all_coref_resolved_questions
 
 
-for corpus in ['train']:
+for corpus in ['train', 'dev']:
     print("\nSplit = %s" % corpus)
     with open('data/specificity_qa_dataset/%s.pickle' % corpus, 'rb') as f:
         data = pickle.load(f)

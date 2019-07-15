@@ -80,7 +80,7 @@ for corpus in ['train', 'dev']:
 
                 instances.append({
                     'paragraph': para['text'],
-                    'question': qa['question'],
+                    'question': qa['question'].strip(),
                     'class': qa['conceptual_category'],
                     'answer': qa['answer'],
                     'answer_position': qa['local_ans_position']

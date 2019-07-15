@@ -62,9 +62,22 @@ def build_input_from_segments(data_point, tokenizer, with_eos=True):
     curr_para = data_point['paragraph']
     curr_ans = data_point['answer']
     curr_ques = data_point['question']
+    ans_start = data_point['answer_position_tokenized'][0]
+    ans_end = data_point['answer_position_tokenized'][1]
 
     sequence = [bos] + curr_para
-    token_types = [paragraph for _ in range(len(curr_para) + 1)]
+    if data_point['class'] == 'general':
+        # This segmentation will encode positional information
+        token_types = [
+            answer_general if ((i - 1) >= ans_start and (i - 1) < ans_end) else paragraph
+            for i in range(len(curr_para) + 1)
+        ]
+    elif data_point['class'] == 'specific':
+        # This segmentation will encode positional information
+        token_types = [
+            answer_specific if ((i - 1) >= ans_start and (i - 1) < ans_end) else paragraph
+            for i in range(len(curr_para) + 1)
+        ]
     lm_labels = [-1 for _ in range(len(curr_para) + 1)]
 
     if data_point['class'] == 'general':
@@ -108,10 +121,26 @@ def build_input_from_segments(data_point, tokenizer, with_eos=True):
 
 def build_para_only_input_from_segments(data_point, tokenizer):
     """A paragraph-only version of build_input_from_segments()."""
-    bos, eos, paragraph = tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS[:3])
+    bos, eos, paragraph, answer_general, answer_specific, question_general, question_specific = \
+        tokenizer.convert_tokens_to_ids(SPECIAL_TOKENS[:-1])
+
     curr_para = data_point['paragraph']
+    ans_start = data_point['answer_position_tokenized'][0]
+    ans_end = data_point['answer_position_tokenized'][1]
+
     sequence = [bos] + curr_para
-    token_types = [paragraph for _ in range(len(curr_para) + 1)]
+    if data_point['class'] == 'general':
+        # This segmentation will encode positional information
+        token_types = [
+            answer_general if ((i - 1) >= ans_start and (i - 1) < ans_end) else paragraph
+            for i in range(len(curr_para) + 1)
+        ]
+    elif data_point['class'] == 'specific':
+        # This segmentation will encode positional information
+        token_types = [
+            answer_specific if ((i - 1) >= ans_start and (i - 1) < ans_end) else paragraph
+            for i in range(len(curr_para) + 1)
+        ]
     lm_labels = [-1 for _ in range(len(curr_para) + 1)]
 
     assert len(sequence) == len(token_types)

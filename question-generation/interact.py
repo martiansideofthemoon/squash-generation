@@ -14,7 +14,7 @@ import torch.nn.functional as F
 from pytorch_pretrained_bert import OpenAIGPTLMHeadModel, OpenAIGPTTokenizer, GPT2LMHeadModel, GPT2Tokenizer
 from train import SPECIAL_TOKENS
 from train import build_para_only_input_from_segments, build_qa_only_input_from_segments
-from dataloader import get_dataset_from_file
+from dataloader import get_positional_dataset_from_file
 
 
 def top_filtering(logits, top_k=0, top_p=0.0, threshold=-float('Inf'), filter_value=-float('Inf')):
@@ -149,7 +149,7 @@ def run():
     model.to(args.device)
     model.eval()
 
-    data = get_dataset_from_file(tokenizer, args.filename)
+    data = get_positional_dataset_from_file(tokenizer, args.filename)
     final_output_dict = {
         "version": "squash-2.0",
         "data": [{
@@ -188,6 +188,13 @@ def run():
         para_index = inst['para_index']
         para_cache["index"] = inst['para_index']
 
+        # verify whether the answer position is correct, since this will be utilized for filtering
+        original_ans_position = output["answer_position"]
+        if original_paragraph[output["answer_position"]:output["answer_position"] + len(original_answer)] != original_answer:
+            # This should never be executed, only used as a last resort
+            logger.info("Answer mismatch!")
+            original_ans_position = original_paragraph.index(original_answer)
+
         # Output in a SQUAD-like format with questions clumped together under their parent paragraph
         if len(final_output_dict["data"][0]["paragraphs"]) > para_index:
             # verify whether the paragraph text is identical
@@ -198,7 +205,7 @@ def run():
                 'question': generated_question,
                 'answers': [{
                     'text': original_answer,
-                    'answer_start': original_paragraph.index(original_answer)
+                    'answer_start': original_ans_position,
                 }],
                 'class': output['class'],
                 'algorithm': output['algorithm'],
@@ -213,7 +220,7 @@ def run():
                     'question': generated_question,
                     'answers': [{
                         'text': original_answer,
-                        'answer_start': original_paragraph.index(original_answer)
+                        'answer_start': original_ans_position,
                     }],
                     'class': output['class'],
                     'algorithm': output['algorithm'],

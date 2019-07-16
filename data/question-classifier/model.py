@@ -18,9 +18,9 @@ class ELMoClassifier(nn.Module):
     def __init__(self, config, device):
         super(ELMoClassifier, self).__init__()
 
-        options_file = "/mnt/nfs/work1/miyyer/pretrained_embeddings/elmo/elmo_2x4096_512_2048cnn_2xhighway_options.json"
-        weight_file = "/mnt/nfs/work1/miyyer/pretrained_embeddings/elmo/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5"
-
+        options_file = "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_options.json"
+        weight_file = "https://allennlp.s3.amazonaws.com/models/elmo/2x4096_512_2048cnn_2xhighway/elmo_2x4096_512_2048cnn_2xhighway_weights.hdf5"
+        
         self.elmo = Elmo(options_file, weight_file, 1, dropout=config.dropout)
         self.cnn_encoder = cnn_encoder.CnnEncoder(1024, num_filters=100, output_dim=2)
         self.loss = torch.nn.CrossEntropyLoss()

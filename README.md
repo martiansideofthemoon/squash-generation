@@ -4,7 +4,7 @@ This is the official repository accompanying the ACL 2019 long paper *[Generatin
 
 The codebase in this repository contains a modified and improved version of the original codebase and tries to leverage language model pretraining in all its modules. The question generation module is a transformer-based model based off of GPT-2 which has been forked from [huggingface/transfer-learning-conv-ai](https://github.com/huggingface/transfer-learning-conv-ai). The question answering module is a BERT-based SQUAD 2.0 model forked from [huggingface/pytorch-pretrained-BERT](https://github.com/huggingface/pytorch-pretrained-BERT). Finally, the filtering has been greatly simplified and can be easily customized based on user preferences.
 
-A technical note on the modified system will be added soon!
+You can read a technical note on the modified system [here](http://martiansideofthemoon.github.io/assets/squash-technical-note.pdf).
 
 ## Requirements
 

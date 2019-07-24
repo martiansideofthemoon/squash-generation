@@ -1039,8 +1039,6 @@ def main():
         # Load a trained model and vocabulary that you have fine-tuned
         model = BertForQuestionAnswering.from_pretrained(args.output_dir)
         tokenizer = BertTokenizer.from_pretrained(args.output_dir, do_lower_case=args.do_lower_case)
-    else:
-        model = BertForQuestionAnswering.from_pretrained(args.bert_model)
 
     model.to(device)
 

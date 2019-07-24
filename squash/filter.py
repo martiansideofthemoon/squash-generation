@@ -44,10 +44,15 @@ class Paragraph(object):
         # Calculate the expected number of questions of each type
         expected = {k: int(np.ceil(filter_frac[k] * total[k])) for k, _ in total.items()}
 
-        # Choose best candidate, except for SPECIFIC_sent questions
-        self.choose_best_sample()
+        len_original_qas = len(self.original_qas)
         # Remove exact duplicate question text candidates
-        unique_qas = self.remove_exact_duplicates(self.original_qas)
+        unique_qs = self.remove_exact_duplicate_questions(self.original_qas)
+        len_unique_qs = len(unique_qs)
+        # Within every paragraph, remove exact-duplicate predicted answer texts
+        unique_qas = self.remove_exact_duplicate_answers(unique_qs)
+
+        print("%d / %d left after removing exact duplicate questions" % (len_unique_qs, len_original_qas))
+        print("%d / %d left after removing exact duplicate answers" % (len(unique_qas), len_original_qas))
 
         # From the remaining candidates, carry out filtering based on filter_frac
         # For filtering, remove unanswerable questions, generic and bad entity questions and finally
@@ -69,10 +74,7 @@ class Paragraph(object):
             qa['precision_match'] = precision_metric(ans, gt_ans)
             qa['unanswerable'] = qa['predicted_answer'] == ''
 
-    def choose_best_sample(self):
-        pass
-
-    def remove_exact_duplicates(self, input_list):
+    def remove_exact_duplicate_questions(self, input_list):
         unique_qa_list = []
         unique_qa_dict = defaultdict(list)
 
@@ -81,7 +83,37 @@ class Paragraph(object):
             unique_qa_dict[normalized_q].append(qa)
 
         # Keep only first occurence for each question
+        # Since answering model is seeing same (paragraph, question) input, answer will be same
         for _, duplicates in unique_qa_dict.items():
+            unique_qa_list.append(duplicates[0])
+
+        unique_qa_list.sort(key=lambda x: x['id'])
+
+        return unique_qa_list
+
+    def remove_exact_duplicate_answers(self, input_list):
+        """Within each paragraph, ensure that every SPECIFIC predicted answer is unique."""
+        unique_qa_list = []
+        unique_qa_dict = defaultdict(list)
+
+        for qa in input_list:
+            # We don't want to be too aggressive about the unanswerable questions since the
+            # answering module could have made mistakes. Unanswerable questions will be dealt
+            # with later on in the filtering phase depending on the user settings.
+            if qa['unanswerable'] is True or qa["algorithm"] == "general_sent":
+                unique_qa_list.append(qa)
+                continue
+            normalized_a = normalize(qa['predicted_answer'])
+            unique_qa_dict[normalized_a].append(qa)
+
+        metrics = {
+            "specific_sent": "precision_match",
+            "specific_entity": "recall_match"
+        }
+
+        # Now, sort the duplications according to the precision / recall scores with intended answer
+        for _, duplicates in unique_qa_dict.items():
+            duplicates.sort(key=lambda x: (-x[metrics[x['algorithm']]], x['id']))
             unique_qa_list.append(duplicates[0])
 
         unique_qa_list.sort(key=lambda x: x['id'])

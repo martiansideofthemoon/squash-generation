@@ -73,7 +73,7 @@ def classify(args, device):
     # If the saving directory has no checkpoints, this function will not do anything
     load_weights(model, args.best_dir)
 
-    with open('data/high_low/quac_coqa_dev.pickle', 'rb') as f:
+    with open('data/specificity_qa_dataset/dev.pickle', 'rb') as f:
         data = pickle.load(f)
 
     with torch.no_grad():
@@ -96,7 +96,7 @@ def classify(args, device):
                             qa['high_low_mode'] = 'classifier'
                             qa['high_low'] = 'overview' if preds.item() == 0 else 'conceptual'
 
-    with open('data/high_low/quac_coqa_dev.pickle', 'wb') as f:
+    with open('data/specificity_qa_dataset/dev.pickle', 'wb') as f:
         pickle.dump(data, f)
 
 
@@ -109,7 +109,7 @@ def classify_coqa(args, device):
     # If the saving directory has no checkpoints, this function will not do anything
     load_weights(model, args.best_dir)
 
-    with open('data/high_low/quac_coqa_dev.pickle', 'rb') as f:
+    with open('data/specificity_qa_dataset/dev.pickle', 'rb') as f:
         data = pickle.load(f)
 
     with torch.no_grad():

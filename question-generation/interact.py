@@ -8,6 +8,8 @@ import random
 import tqdm
 from argparse import ArgumentParser
 from pprint import pformat
+import os
+import time
 import torch
 import torch.nn.functional as F
 
@@ -120,15 +122,6 @@ def run():
                         help="Override the default settings if the key is set, used in pipeline mode")
     args = parser.parse_args()
 
-    if args.key is not None:
-        # Override some the filename and top_p default settings if args.key is set
-        # This is done when the question generation module is being used in the SQUASH pipeline mode
-        args.filename = "squash/temp/%s/input.pkl" % args.key
-
-        with open("squash/temp/%s/metadata.json" % args.key, "r") as f:
-            metadata = json.loads(f.read())
-        args.top_p = metadata["settings"]["top_p"]
-
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__file__)
     logger.info(pformat(args))
@@ -149,73 +142,93 @@ def run():
     model.to(args.device)
     model.eval()
 
-    data = get_positional_dataset_from_file(tokenizer, args.filename)
-    final_output_dict = {
-        "version": "squash-2.0",
-        "data": [{
-            "paragraphs": []
-        }]
-    }
-    question_number = 0
+    while True:
+        next_key = None
 
-    para_cache = {
-        "index": None,
-        "hidden_states": None
-    }
+        time.sleep(0.2)
+        with open("squash/temp/queue.txt", "r") as f:
+            data = f.read().strip()
+        if len(data) == 0:
+            continue
+        next_key = data.split("\n")[0]
 
-    for inst in tqdm.tqdm(data):
-        with torch.no_grad():
-            para_index = inst["para_index"]
-            # Questions from the same paragraph all appear together
-            # We can re-use the paragraph hidden representations for different questions in the same paragraph
-            if para_index != para_cache["index"]:
-                # Since we have moved to a new paragraph, generate its cache
-                para_cache["hidden_states"] = None
-                # Ignore the answer and question while building the input
-                instance, _ = build_para_only_input_from_segments(inst, tokenizer)
-                input_ids = torch.tensor(instance['input_ids'], device=args.device).unsqueeze(0)
-                token_type_ids = torch.tensor(instance['token_type_ids'], device=args.device).unsqueeze(0)
-
-                # Run a forward pass to generate the para caches
-                _, para_cache["hidden_states"] = model(input_ids, token_type_ids=token_type_ids)
-
-            # Sample a question using the paragraph cache
-            output = sample_sequence(inst, tokenizer, model, args, para_cache)
-
-        original_paragraph = tokenizer.decode(output['paragraph'])
-        generated_question = tokenizer.decode(output['question'], skip_special_tokens=True)
-        original_answer = tokenizer.decode(output['answer'], skip_special_tokens=True)
-        para_index = inst['para_index']
-        para_cache["index"] = inst['para_index']
-
-        # verify whether the answer position is correct, since this will be utilized for filtering
-        original_ans_position = output["answer_position"]
-        if original_paragraph[output["answer_position"]:output["answer_position"] + len(original_answer)] != original_answer:
-            # This should never be executed, only used as a last resort
-            logger.info("Answer mismatch!")
-            original_ans_position = original_paragraph.index(original_answer)
-
-        # Output in a SQUAD-like format with questions clumped together under their parent paragraph
-        if len(final_output_dict["data"][0]["paragraphs"]) > para_index:
-            # verify whether the paragraph text is identical
-            assert original_paragraph == final_output_dict["data"][0]["paragraphs"][para_index]['context']
-            # append the question answer pair
-            final_output_dict["data"][0]["paragraphs"][para_index]['qas'].append({
-                'id': 'question_%d' % question_number,
-                'question': generated_question,
-                'answers': [{
-                    'text': original_answer,
-                    'answer_start': original_ans_position,
-                }],
-                'class': output['class'],
-                'algorithm': output['algorithm'],
-                'is_impossible': False
-            })
+        # Check whether the answer extraction is still pending
+        if not os.path.exists("squash/temp/%s/input.pkl" % next_key):
+            continue
+        # Check whether question generation is complete
+        elif os.path.exists("squash/temp/%s/generated_questions.json" % next_key):
+            continue
         else:
-            # add a new question to the list of QA pairs
-            final_output_dict['data'][0]['paragraphs'].append({
-                'context': original_paragraph,
-                'qas': [{
+            print("Generating questions for %s" % next_key)
+
+        # Override some the filename and top_p default settings if next_key is set
+        # This is done when the question generation module is being used in the SQUASH pipeline mode
+        args.filename = "squash/temp/%s/input.pkl" % next_key
+
+        with open("squash/temp/%s/metadata.json" % next_key, "r") as f:
+            metadata = json.loads(f.read())
+        args.top_p = metadata["settings"]["top_p"]
+
+        try:
+            data = get_positional_dataset_from_file(tokenizer, args.filename)
+        except Exception as e:
+            # This is the unlikely situation where the input.pkl is not completely written
+            # This error wont cause a problem on the next cycle
+            logger.info(e)
+            logger.info("Error while processing input.pkl")
+            continue
+
+        final_output_dict = {
+            "version": "squash-2.0",
+            "data": [{
+                "paragraphs": []
+            }]
+        }
+        question_number = 0
+
+        para_cache = {
+            "index": None,
+            "hidden_states": None
+        }
+
+        for inst in tqdm.tqdm(data):
+            with torch.no_grad():
+                para_index = inst["para_index"]
+                # Questions from the same paragraph all appear together
+                # We can re-use the paragraph hidden representations for different questions in the same paragraph
+                if para_index != para_cache["index"]:
+                    # Since we have moved to a new paragraph, generate its cache
+                    para_cache["hidden_states"] = None
+                    # Ignore the answer and question while building the input
+                    instance, _ = build_para_only_input_from_segments(inst, tokenizer)
+                    input_ids = torch.tensor(instance['input_ids'], device=args.device).unsqueeze(0)
+                    token_type_ids = torch.tensor(instance['token_type_ids'], device=args.device).unsqueeze(0)
+
+                    # Run a forward pass to generate the para caches
+                    _, para_cache["hidden_states"] = model(input_ids, token_type_ids=token_type_ids)
+
+                # Sample a question using the paragraph cache
+                output = sample_sequence(inst, tokenizer, model, args, para_cache)
+
+            original_paragraph = tokenizer.decode(output['paragraph'])
+            generated_question = tokenizer.decode(output['question'], skip_special_tokens=True)
+            original_answer = tokenizer.decode(output['answer'], skip_special_tokens=True)
+            para_index = inst['para_index']
+            para_cache["index"] = inst['para_index']
+
+            # verify whether the answer position is correct, since this will be utilized for filtering
+            original_ans_position = output["answer_position"]
+            if original_paragraph[output["answer_position"]:output["answer_position"] + len(original_answer)] != original_answer:
+                # This should never be executed, only used as a last resort
+                logger.info("Answer mismatch!")
+                original_ans_position = original_paragraph.index(original_answer)
+
+            # Output in a SQUAD-like format with questions clumped together under their parent paragraph
+            if len(final_output_dict["data"][0]["paragraphs"]) > para_index:
+                # verify whether the paragraph text is identical
+                assert original_paragraph == final_output_dict["data"][0]["paragraphs"][para_index]['context']
+                # append the question answer pair
+                final_output_dict["data"][0]["paragraphs"][para_index]['qas'].append({
                     'id': 'question_%d' % question_number,
                     'question': generated_question,
                     'answers': [{
@@ -225,13 +238,28 @@ def run():
                     'class': output['class'],
                     'algorithm': output['algorithm'],
                     'is_impossible': False
-                }]
-            })
+                })
+            else:
+                # add a new question to the list of QA pairs
+                final_output_dict['data'][0]['paragraphs'].append({
+                    'context': original_paragraph,
+                    'qas': [{
+                        'id': 'question_%d' % question_number,
+                        'question': generated_question,
+                        'answers': [{
+                            'text': original_answer,
+                            'answer_start': original_ans_position,
+                        }],
+                        'class': output['class'],
+                        'algorithm': output['algorithm'],
+                        'is_impossible': False
+                    }]
+                })
 
-        question_number += 1
+            question_number += 1
 
-    with open("squash/temp/%s/generated_questions.json" % args.key, "w") as f:
-        f.write(json.dumps(final_output_dict))
+        with open("squash/temp/%s/generated_questions.json" % next_key, "w") as f:
+            f.write(json.dumps(final_output_dict))
 
 
 if __name__ == "__main__":

@@ -1,7 +1,9 @@
 import argparse
 import json
 import pickle
+import os
 import spacy
+import time
 
 parser = argparse.ArgumentParser()
 
@@ -27,50 +29,66 @@ def get_answer_spans(para_text):
 
     return sentences, entities
 
-with open('squash/temp/%s/metadata.json' % args.key, 'r') as f:
-    data = json.loads(f.read())['input_text'].split('\n')
+while True:
+    next_key = None
 
-instances = []
+    time.sleep(0.2)
+    with open("squash/temp/queue.txt", "r") as f:
+        data = f.read().strip()
+    if len(data) == 0:
+        continue
+    next_key = data.split("\n")[0]
 
-for i, para in enumerate(data):
+    # Check whether answer extraction is already complete
+    if os.path.exists("squash/temp/%s/input.pkl" % next_key):
+        continue
+    else:
+        print("Extracting answers for %s" % next_key)
 
-    sentences, entities = get_answer_spans(para)
+    with open('squash/temp/%s/metadata.json' % next_key, 'r') as f:
+        data = json.loads(f.read())['input_text'].split('\n')
 
-    # GENERAL questions from sentences of text
-    for sent in sentences:
-        instances.append({
-            'question': 'what is the answer to life the universe and everything?',
-            'paragraph': para,
-            'class': 'general',
-            'answer': sent[0],
-            'answer_position': sent[1],
-            'para_index': i,
-            'algorithm': 'general_sent'
-        })
+    instances = []
 
-    # SPECIFIC questions mined from sentences of text
-    for sent in sentences:
-        instances.append({
-            'question': 'what is the answer to life the universe and everything?',
-            'paragraph': para,
-            'class': 'specific',
-            'answer': sent[0],
-            'answer_position': sent[1],
-            'para_index': i,
-            'algorithm': 'specific_sent'
-        })
+    for i, para in enumerate(data):
 
-    # SPECIFIC questions with entity answers
-    for ent in entities:
-        instances.append({
-            'question': 'what is the answer to life the universe and everything?',
-            'paragraph': para,
-            'class': 'specific',
-            'answer': ent[0],
-            'answer_position': ent[1],
-            'para_index': i,
-            'algorithm': 'specific_entity'
-        })
+        sentences, entities = get_answer_spans(para)
 
-with open('squash/temp/%s/input.pkl' % args.key, 'wb') as f:
-    pickle.dump(instances, f)
+        # GENERAL questions from sentences of text
+        for sent in sentences:
+            instances.append({
+                'question': 'what is the answer to life the universe and everything?',
+                'paragraph': para,
+                'class': 'general',
+                'answer': sent[0],
+                'answer_position': sent[1],
+                'para_index': i,
+                'algorithm': 'general_sent'
+            })
+
+        # SPECIFIC questions mined from sentences of text
+        for sent in sentences:
+            instances.append({
+                'question': 'what is the answer to life the universe and everything?',
+                'paragraph': para,
+                'class': 'specific',
+                'answer': sent[0],
+                'answer_position': sent[1],
+                'para_index': i,
+                'algorithm': 'specific_sent'
+            })
+
+        # SPECIFIC questions with entity answers
+        for ent in entities:
+            instances.append({
+                'question': 'what is the answer to life the universe and everything?',
+                'paragraph': para,
+                'class': 'specific',
+                'answer': ent[0],
+                'answer_position': ent[1],
+                'para_index': i,
+                'algorithm': 'specific_entity'
+            })
+
+    with open('squash/temp/%s/input.pkl' % next_key, 'wb') as f:
+        pickle.dump(instances, f)

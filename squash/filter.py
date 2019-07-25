@@ -6,6 +6,7 @@ import random
 import sys
 import os
 import spacy
+import time
 
 from collections import defaultdict
 
@@ -49,7 +50,8 @@ class Paragraph(object):
         unique_qs = self.remove_exact_duplicate_questions(self.original_qas)
         len_unique_qs = len(unique_qs)
         # Within every paragraph, remove exact-duplicate predicted answer texts
-        unique_qas = self.remove_exact_duplicate_answers(unique_qs)
+        unique_qas = self.remove_exact_duplicate_answers(unique_qs, "specific")
+        unique_qas = self.remove_exact_duplicate_answers(unique_qas, "general")
 
         print("%d / %d left after removing exact duplicate questions" % (len_unique_qs, len_original_qas))
         print("%d / %d left after removing exact duplicate answers" % (len(unique_qas), len_original_qas))
@@ -91,22 +93,28 @@ class Paragraph(object):
 
         return unique_qa_list
 
-    def remove_exact_duplicate_answers(self, input_list):
-        """Within each paragraph, ensure that every SPECIFIC predicted answer is unique."""
+    def remove_exact_duplicate_answers(self, input_list, question_type="specific"):
+        """Within each paragraph, ensure that every GENERAL / SPECIFIC predicted answer is unique."""
         unique_qa_list = []
         unique_qa_dict = defaultdict(list)
+
+        if question_type == "specific":
+            retain_type = "general"
+        else:
+            retain_type = "specific"
 
         for qa in input_list:
             # We don't want to be too aggressive about the unanswerable questions since the
             # answering module could have made mistakes. Unanswerable questions will be dealt
             # with later on in the filtering phase depending on the user settings.
-            if qa['unanswerable'] is True or qa["algorithm"] == "general_sent":
+            if qa['unanswerable'] is True or retain_type in qa["algorithm"]:
                 unique_qa_list.append(qa)
                 continue
             normalized_a = normalize(qa['predicted_answer'])
             unique_qa_dict[normalized_a].append(qa)
 
         metrics = {
+            "general_sent": "recall_match",
             "specific_sent": "precision_match",
             "specific_entity": "recall_match"
         }
@@ -176,30 +184,64 @@ class Paragraph(object):
 
         return general_questions
 
-with open('squash/temp/%s/final_qa_set.json' % args.key, 'r') as f:
-    paras = json.loads(f.read())['data'][0]['paragraphs']
+while True:
+    next_key = None
 
-with open("squash/temp/%s/metadata.json" % args.key, "r") as f:
-    metadata = json.loads(f.read())
+    time.sleep(0.2)
+    with open("squash/temp/queue.txt", "r") as f:
+        data = f.read().strip()
+    if len(data) == 0:
+        continue
+    next_key = data.split("\n")[0]
 
-filter_frac = {
-    "general_sent": metadata["settings"]["gen_frac"],
-    "specific_sent": metadata["settings"]["spec_frac"],
-    "specific_entity": metadata["settings"]["spec_frac"]
-}
+    # Check whether the question answering is still pending
+    if not os.path.exists("squash/temp/%s/predictions.json" % next_key):
+        continue
+    # Check whether question filtering is complete
+    elif os.path.exists("squash/final/%s.json" % next_key):
+        continue
+    else:
+        print("Filtering QA for %s" % next_key)
 
-full_summary = [Paragraph(para, filter_frac=filter_frac) for para in paras]
+    # First, combine the question and answers together
+    try:
+        with open('squash/temp/%s/predictions.json' % next_key, 'r') as f:
+            answer_data = json.loads(f.read())
+    except Exception as e:
+        # This is the unlikely situation where the predictions.json is not completely written
+        # This error wont cause a problem on the next cycle
+        print(e)
+        print("Error while processing predictions.json")
+        continue
 
-squash_output = {
-    'instance_key': args.key,
-    'qa_tree': []
-}
+    with open('squash/temp/%s/generated_questions.json' % next_key, 'r') as f:
+        question_data = json.loads(f.read())
 
-for para in full_summary:
-    squash_output['qa_tree'].append({
-        'para_text': para.text,
-        'binned_qas': para.binned_qas
-    })
+    for para in question_data["data"][0]['paragraphs']:
+        for qa in para['qas']:
+            qa['predicted_answer'] = answer_data[qa['id']]
 
-with open('squash/final/%s.json' % args.key, 'w') as f:
-    f.write(json.dumps(squash_output))
+    with open("squash/temp/%s/metadata.json" % next_key, "r") as f:
+        metadata = json.loads(f.read())
+
+    filter_frac = {
+        "general_sent": metadata["settings"]["gen_frac"],
+        "specific_sent": metadata["settings"]["spec_frac"],
+        "specific_entity": metadata["settings"]["spec_frac"]
+    }
+
+    full_summary = [Paragraph(para, filter_frac=filter_frac) for para in question_data["data"][0]['paragraphs']]
+
+    squash_output = {
+        'instance_key': next_key,
+        'qa_tree': []
+    }
+
+    for para in full_summary:
+        squash_output['qa_tree'].append({
+            'para_text': para.text,
+            'binned_qas': para.binned_qas
+        })
+
+    with open('squash/final/%s.json' % next_key, 'w') as f:
+        f.write(json.dumps(squash_output))

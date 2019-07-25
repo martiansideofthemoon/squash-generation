@@ -18,7 +18,6 @@ cycler==0.10.0
 cymem==2.0.2
 docutils==0.14
 editdistance==0.5.3
-en-core-web-sm==2.1.0
 flaky==3.5.3
 Flask==1.0.3
 Flask-Cors==3.0.8

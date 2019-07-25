@@ -184,64 +184,31 @@ class Paragraph(object):
 
         return general_questions
 
-while True:
-    next_key = None
 
-    time.sleep(0.2)
-    with open("squash/temp/queue.txt", "r") as f:
-        data = f.read().strip()
-    if len(data) == 0:
-        continue
-    next_key = data.split("\n")[0]
+with open('squash/temp/%s/final_qa_set.json' % args.key, 'r') as f:
+    paras = json.loads(f.read())['data'][0]['paragraphs']
 
-    # Check whether the question answering is still pending
-    if not os.path.exists("squash/temp/%s/predictions.json" % next_key):
-        continue
-    # Check whether question filtering is complete
-    elif os.path.exists("squash/final/%s.json" % next_key):
-        continue
-    else:
-        print("Filtering QA for %s" % next_key)
+with open("squash/temp/%s/metadata.json" % args.key, "r") as f:
+    metadata = json.loads(f.read())
 
-    # First, combine the question and answers together
-    try:
-        with open('squash/temp/%s/predictions.json' % next_key, 'r') as f:
-            answer_data = json.loads(f.read())
-    except Exception as e:
-        # This is the unlikely situation where the predictions.json is not completely written
-        # This error wont cause a problem on the next cycle
-        print(e)
-        print("Error while processing predictions.json")
-        continue
+filter_frac = {
+    "general_sent": metadata["settings"]["gen_frac"],
+    "specific_sent": metadata["settings"]["spec_frac"],
+    "specific_entity": metadata["settings"]["spec_frac"]
+}
 
-    with open('squash/temp/%s/generated_questions.json' % next_key, 'r') as f:
-        question_data = json.loads(f.read())
+full_summary = [Paragraph(para, filter_frac=filter_frac) for para in paras]
 
-    for para in question_data["data"][0]['paragraphs']:
-        for qa in para['qas']:
-            qa['predicted_answer'] = answer_data[qa['id']]
+squash_output = {
+    'instance_key': args.key,
+    'qa_tree': []
+}
 
-    with open("squash/temp/%s/metadata.json" % next_key, "r") as f:
-        metadata = json.loads(f.read())
+for para in full_summary:
+    squash_output['qa_tree'].append({
+        'para_text': para.text,
+        'binned_qas': para.binned_qas
+    })
 
-    filter_frac = {
-        "general_sent": metadata["settings"]["gen_frac"],
-        "specific_sent": metadata["settings"]["spec_frac"],
-        "specific_entity": metadata["settings"]["spec_frac"]
-    }
-
-    full_summary = [Paragraph(para, filter_frac=filter_frac) for para in question_data["data"][0]['paragraphs']]
-
-    squash_output = {
-        'instance_key': next_key,
-        'qa_tree': []
-    }
-
-    for para in full_summary:
-        squash_output['qa_tree'].append({
-            'para_text': para.text,
-            'binned_qas': para.binned_qas
-        })
-
-    with open('squash/final/%s.json' % next_key, 'w') as f:
-        f.write(json.dumps(squash_output))
+with open('squash/final/%s.json' % args.key, 'w') as f:
+    f.write(json.dumps(squash_output))

@@ -6,7 +6,7 @@ import time
 while True:
     next_key = None
 
-    time.sleep(0.2)
+    time.sleep(0.3)
     with open("squash/temp/queue.txt", "r") as f:
         data = f.read().strip()
     if len(data) == 0:

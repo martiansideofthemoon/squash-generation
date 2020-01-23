@@ -43,7 +43,9 @@ class Paragraph(object):
             'specific_entity': self.count(self.original_qas, 'specific_entity'),
         }
         # Calculate the expected number of questions of each type
-        expected = {k: int(np.ceil(filter_frac[k] * total[k])) for k, _ in total.items()}
+        expected = {
+            k: max(int(np.ceil(filter_frac[k] * total[k])), 1) for k, _ in total.items()
+        }
 
         len_original_qas = len(self.original_qas)
         # Remove exact duplicate question text candidates

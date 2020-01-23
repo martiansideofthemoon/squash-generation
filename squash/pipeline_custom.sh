@@ -33,12 +33,12 @@ python question-answering/run_squad.py \
 	--bert_model question-answering/bert_large_qa_model \
 	--do_predict \
 	--do_lower_case \
-	--predict_file squash/temp/generated_questions.json \
-	--output_dir squash/temp \
+	--predict_file squash/temp/$KEY/generated_questions.json \
+	--output_dir squash/temp/$KEY \
   	--version_2_with_negative
 
  echo 'Combining Q and A ...'
- python squash/combine_qa.py
+ python squash/combine_qa.py --key $KEY
 
 echo 'Filtering bad Q/As ...'
-python squash/filter.py
+python squash/filter.py --key $KEY

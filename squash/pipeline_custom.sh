@@ -25,7 +25,8 @@ echo 'Generating questions ...'
 python question-generation/interact.py \
 	--model_checkpoint question-generation/gpt2_corefs_question_generation \
 	--filename squash/temp/input.pkl \
-	--model_type gpt2
+	--model_type gpt2 \
+	--key $KEY
 
 echo 'Running QA module ...'
 python question-answering/run_squad.py \

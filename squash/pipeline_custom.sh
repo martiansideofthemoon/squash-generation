@@ -24,7 +24,7 @@ python squash/extract_answers.py --key $KEY
 echo 'Generating questions ...'
 python question-generation/interact.py \
 	--model_checkpoint question-generation/gpt2_corefs_question_generation \
-	--filename squash/temp/input.pkl \
+	--filename squash/temp/$KEY/input.pkl \
 	--model_type gpt2 \
 	--key $KEY
 

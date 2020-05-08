@@ -18,6 +18,9 @@ from train import SPECIAL_TOKENS
 from train import build_para_only_input_from_segments, build_qa_only_input_from_segments
 from dataloader import get_positional_dataset_from_file
 
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
 
 def top_filtering(logits, top_k=0, top_p=0.0, threshold=-float('Inf'), filter_value=-float('Inf')):
     """ Filter a distribution of logits using top-k, top-p (nucleus) and/or threshold filtering
@@ -100,72 +103,68 @@ def sample_sequence(inst, tokenizer, model, args, para_cache):
 
     return inst
 
+parser = ArgumentParser()
+parser.add_argument("--model_type", type=str, default="gpt", help="gpt or gpt2")
+parser.add_argument("--model_checkpoint", type=str, default="", help="Path, url or short name of the model")
+parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu",
+                    help="Device (cuda or cpu)")
+parser.add_argument("--filename", type=str, default="data/instances_dev.pkl", help="File to use for decoding")
+parser.add_argument("--no_sample", action='store_true', help="Set to use greedy decoding instead of sampling")
+parser.add_argument("--max_length", type=int, default=50, help="Maximum length of the output utterances")
+parser.add_argument("--min_length", type=int, default=1, help="Minimum length of the output utterances")
+parser.add_argument("--seed", type=int, default=42, help="Seed")
+parser.add_argument("--temperature", type=int, default=0.7, help="Sampling softmax temperature")
+parser.add_argument("--top_k", type=int, default=0, help="Filter top-k tokens before sampling (<=0: no filtering)")
+parser.add_argument("--top_p", type=float, default=0.9,
+                    help="Nucleus filtering (top-p) before sampling (<=0.0: no filtering)")
 
-def run():
-    parser = ArgumentParser()
-    parser.add_argument("--model_type", type=str, default="gpt", help="gpt or gpt2")
-    parser.add_argument("--model_checkpoint", type=str, default="", help="Path, url or short name of the model")
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu",
-                        help="Device (cuda or cpu)")
-    parser.add_argument("--filename", type=str, default="data/instances_dev.pkl", help="File to use for decoding")
-    parser.add_argument("--no_sample", action='store_true', help="Set to use greedy decoding instead of sampling")
-    parser.add_argument("--max_length", type=int, default=50, help="Maximum length of the output utterances")
-    parser.add_argument("--min_length", type=int, default=1, help="Minimum length of the output utterances")
-    parser.add_argument("--seed", type=int, default=42, help="Seed")
-    parser.add_argument("--temperature", type=int, default=0.7, help="Sampling softmax temperature")
-    parser.add_argument("--top_k", type=int, default=0, help="Filter top-k tokens before sampling (<=0: no filtering)")
-    parser.add_argument("--top_p", type=float, default=0.9,
-                        help="Nucleus filtering (top-p) before sampling (<=0.0: no filtering)")
+# While using SQUASH in the pipeline mode, prefer using the --key flag
+parser.add_argument("--key", type=str, default=None,
+                    help="Override the default settings if the key is set, used in pipeline mode")
+args = parser.parse_args()
 
-    # While using SQUASH in the pipeline mode, prefer using the --key flag
-    parser.add_argument("--key", type=str, default=None,
-                        help="Override the default settings if the key is set, used in pipeline mode")
-    args = parser.parse_args()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__file__)
+logger.info(pformat(args))
 
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger(__file__)
-    logger.info(pformat(args))
+random.seed(args.seed)
+torch.random.manual_seed(args.seed)
+torch.cuda.manual_seed(args.seed)
 
-    random.seed(args.seed)
-    torch.random.manual_seed(args.seed)
-    torch.cuda.manual_seed(args.seed)
+logger.info("Get pretrained model and tokenizer")
 
-    logger.info("Get pretrained model and tokenizer")
+if args.model_type == 'gpt2':
+    tokenizer = GPT2Tokenizer.from_pretrained(args.model_checkpoint)
+    model = GPT2LMHeadModel.from_pretrained(args.model_checkpoint)
+else:
+    tokenizer = OpenAIGPTTokenizer.from_pretrained(args.model_checkpoint)
+    model = OpenAIGPTLMHeadModel.from_pretrained(args.model_checkpoint)
 
-    if args.model_type == 'gpt2':
-        tokenizer = GPT2Tokenizer.from_pretrained(args.model_checkpoint)
-        model = GPT2LMHeadModel.from_pretrained(args.model_checkpoint)
-    else:
-        tokenizer = OpenAIGPTTokenizer.from_pretrained(args.model_checkpoint)
-        model = OpenAIGPTLMHeadModel.from_pretrained(args.model_checkpoint)
+model.to(args.device)
+model.eval()
 
-    model.to(args.device)
-    model.eval()
-
-    while True:
-        next_key = None
-
-        time.sleep(0.3)
-        with open("squash/temp/queue.txt", "r") as f:
+class EventHandler(FileSystemEventHandler):
+    def on_any_event(self, event):
+        with open("squash/generated_outputs/queue/queue.txt", "r") as f:
             data = f.read().strip()
         if len(data) == 0:
-            continue
+            return
         next_key = data.split("\n")[0]
 
         # Check whether the answer extraction is still pending
-        if not os.path.exists("squash/temp/%s/input.pkl" % next_key):
-            continue
+        if not os.path.exists("squash/generated_outputs/inputs/%s/input.pkl" % next_key):
+            return
         # Check whether question generation is complete
-        elif os.path.exists("squash/temp/%s/generated_questions.json" % next_key):
-            continue
+        elif os.path.exists("squash/generated_outputs/generated_questions/%s.json" % next_key):
+            return
         else:
             print("Generating questions for %s" % next_key)
 
         # Override some the filename and top_p default settings if next_key is set
         # This is done when the question generation module is being used in the SQUASH pipeline mode
-        args.filename = "squash/temp/%s/input.pkl" % next_key
+        args.filename = "squash/generated_outputs/inputs/%s/input.pkl" % next_key
 
-        with open("squash/temp/%s/metadata.json" % next_key, "r") as f:
+        with open("squash/generated_outputs/inputs/%s/metadata.json" % next_key, "r") as f:
             metadata = json.loads(f.read())
         args.top_p = metadata["settings"]["top_p"]
 
@@ -176,7 +175,7 @@ def run():
             # This error wont cause a problem on the next cycle
             logger.info(e)
             logger.info("Error while processing input.pkl")
-            continue
+            return
 
         final_output_dict = {
             "version": "squash-2.0",
@@ -258,9 +257,19 @@ def run():
 
             question_number += 1
 
-        with open("squash/temp/%s/generated_questions.json" % next_key, "w") as f:
+        with open("squash/generated_outputs/generated_questions/%s.json" % next_key, "w") as f:
             f.write(json.dumps(final_output_dict))
 
 
 if __name__ == "__main__":
-    run()
+    path = "squash/generated_outputs/inputs"
+    event_handler = EventHandler()
+    observer = Observer()
+    observer.schedule(event_handler, path, recursive=True)
+    observer.start()
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        observer.stop()
+    observer.join()

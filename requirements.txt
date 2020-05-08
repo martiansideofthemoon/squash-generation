@@ -99,6 +99,7 @@ tqdm==4.32.1
 Unidecode==1.1.1
 urllib3==1.25.2
 wasabi==0.2.2
+watchdog==0.10.2
 wcwidth==0.1.7
 Werkzeug==0.15.4
 word2number==1.1

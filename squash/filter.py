@@ -19,6 +19,9 @@ from squad_eval_utils import (
     normalize
 )
 
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
 parser = argparse.ArgumentParser()
 
 parser.add_argument('--key', type=str, default=None,
@@ -186,64 +189,79 @@ class Paragraph(object):
 
         return general_questions
 
-while True:
-    next_key = None
 
-    time.sleep(0.3)
-    with open("squash/temp/queue.txt", "r") as f:
-        data = f.read().strip()
-    if len(data) == 0:
-        continue
-    next_key = data.split("\n")[0]
+class EventHandler(FileSystemEventHandler):
+    def on_any_event(self, event):
+        print(event)
+        with open("squash/generated_outputs/queue/queue.txt", "r") as f:
+            data = f.read().strip()
 
-    # Check whether the question answering is still pending
-    if not os.path.exists("squash/temp/%s/predictions.json" % next_key):
-        continue
-    # Check whether question filtering is complete
-    elif os.path.exists("squash/final/%s.json" % next_key):
-        continue
-    else:
-        print("Filtering QA for %s" % next_key)
+        if len(data) == 0:
+            return
 
-    # First, combine the question and answers together
+        next_key = data.split("\n")[0]
+
+        # Check whether the question answering is still pending
+        if not os.path.exists("squash/generated_outputs/generated_answers/%s/predictions.json" % next_key):
+            return
+        # Check whether question filtering is complete
+        elif os.path.exists("squash/generated_outputs/final/%s.json" % next_key):
+            return
+        else:
+            print("Filtering QA for %s" % next_key)
+
+        # First, combine the question and answers together
+        try:
+            with open('squash/generated_outputs/generated_answers/%s/predictions.json' % next_key, 'r') as f:
+                answer_data = json.loads(f.read())
+        except Exception as e:
+            # This is the unlikely situation where the predictions.json is not completely written
+            # This error wont cause a problem on the next cycle
+            print(e)
+            print("Error while processing predictions.json")
+            return
+
+        with open('squash/generated_outputs/generated_questions/%s.json' % next_key, 'r') as f:
+            question_data = json.loads(f.read())
+
+        for para in question_data["data"][0]['paragraphs']:
+            for qa in para['qas']:
+                qa['predicted_answer'] = answer_data[qa['id']]
+
+        with open("squash/generated_outputs/inputs/%s/metadata.json" % next_key, "r") as f:
+            metadata = json.loads(f.read())
+
+        filter_frac = {
+            "general_sent": metadata["settings"]["gen_frac"],
+            "specific_sent": metadata["settings"]["spec_frac"],
+            "specific_entity": metadata["settings"]["spec_frac"]
+        }
+
+        full_summary = [Paragraph(para, filter_frac=filter_frac) for para in question_data["data"][0]['paragraphs']]
+
+        squash_output = {
+            'instance_key': next_key,
+            'qa_tree': []
+        }
+
+        for para in full_summary:
+            squash_output['qa_tree'].append({
+                'para_text': para.text,
+                'binned_qas': para.binned_qas
+            })
+
+        with open('squash/generated_outputs/final/%s.json' % next_key, 'w') as f:
+            f.write(json.dumps(squash_output))
+
+if __name__ == "__main__":
+    path = "squash/generated_outputs/generated_answers"
+    event_handler = EventHandler()
+    observer = Observer()
+    observer.schedule(event_handler, path, recursive=True)
+    observer.start()
     try:
-        with open('squash/temp/%s/predictions.json' % next_key, 'r') as f:
-            answer_data = json.loads(f.read())
-    except Exception as e:
-        # This is the unlikely situation where the predictions.json is not completely written
-        # This error wont cause a problem on the next cycle
-        print(e)
-        print("Error while processing predictions.json")
-        continue
-
-    with open('squash/temp/%s/generated_questions.json' % next_key, 'r') as f:
-        question_data = json.loads(f.read())
-
-    for para in question_data["data"][0]['paragraphs']:
-        for qa in para['qas']:
-            qa['predicted_answer'] = answer_data[qa['id']]
-
-    with open("squash/temp/%s/metadata.json" % next_key, "r") as f:
-        metadata = json.loads(f.read())
-
-    filter_frac = {
-        "general_sent": metadata["settings"]["gen_frac"],
-        "specific_sent": metadata["settings"]["spec_frac"],
-        "specific_entity": metadata["settings"]["spec_frac"]
-    }
-
-    full_summary = [Paragraph(para, filter_frac=filter_frac) for para in question_data["data"][0]['paragraphs']]
-
-    squash_output = {
-        'instance_key': next_key,
-        'qa_tree': []
-    }
-
-    for para in full_summary:
-        squash_output['qa_tree'].append({
-            'para_text': para.text,
-            'binned_qas': para.binned_qas
-        })
-
-    with open('squash/final/%s.json' % next_key, 'w') as f:
-        f.write(json.dumps(squash_output))
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        observer.stop()
+    observer.join()

@@ -46,6 +46,10 @@ class EventHandler(FileSystemEventHandler):
         else:
             print("Extracting answers for %s" % next_key)
 
+        while not os.path.exists('squash/generated_outputs/inputs/%s/metadata.json' % next_key):
+            print("Waiting for squash/generated_outputs/inputs/%s/metadata.json" % next_key)
+            time.sleep(1.0)
+
         with open('squash/generated_outputs/inputs/%s/metadata.json' % next_key, 'r') as f:
             data = json.loads(f.read())['input_text'].split('\n')
 

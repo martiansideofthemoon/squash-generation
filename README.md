@@ -60,7 +60,7 @@ The codebase for the question generation module can be found under `question-gen
 3. `schedulers/schedule_gpt_corefs.sh` - Fine-tune a question generation model on coref resolved data starting from a pretrained GPT model.
 4. `schedulers/schedule_gpt2_corefs.sh` - Fine-tune a question generation model on coref resolved data starting from a pretrained GPT-2 model.
 
-Since training the question generation model tends to be resource and time intensive, a pre-trained question generation model with the `schedulers/schedule_gpt2_corefs.sh` configuration has been released [here](https://drive.google.com/drive/folders/1HEbm_sHDAAcylKIF4vIvZ9N2jEA7I5Em?usp=sharing).
+Since training the question generation model tends to be resource and time intensive, a pre-trained question generation model with the `schedulers/schedule_gpt2_corefs.sh` configuration has been released [here](https://drive.google.com/drive/folders/1dx-OGNdvtxMZ1VVVcByc8kSqNdop-xdY?usp=sharing).
 
 Extract the pre-trained question generation model in the folder `question-generation/gpt2_corefs_question_generation`.
 
@@ -73,7 +73,7 @@ Our question answering module is a BERT-based model trained on SQuAD 2.0, forked
 1. `schedulers/schedule_squad_bert.sh` - Run a BERT-base model on SQuAD 2.0
 2. `schedulers/schedule_squad_bert_large.sh` - Run a BERT-large model on SQuAD 2.0
 
-Since training the QA model tends to be resource and time intensive, a pre-trained QA model using the `schedulers/schedule_squad_bert_large.sh` configuration has been released [here](https://drive.google.com/drive/folders/1D3fIPuwn0C0zIMg29QSKcnSAc8HfNemd?usp=sharing). This model gets an F1 score of 78.8 on the SQuAD 2.0 development set (the original BERT paper reports an F1 score of 81.9).
+Since training the QA model tends to be resource and time intensive, a pre-trained QA model using the `schedulers/schedule_squad_bert_large.sh` configuration has been released [here](https://drive.google.com/drive/folders/17Xh0RoMcIDyF8Z54j00VkU0Zs-VTh9KA?usp=sharing). This model gets an F1 score of 78.8 on the SQuAD 2.0 development set (the original BERT paper reports an F1 score of 81.9).
 
 Extract the pre-trained QA model in the folder `question-answering/bert_large_qa_model`.
 

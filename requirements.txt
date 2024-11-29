@@ -67,7 +67,7 @@ pytest==4.6.3
 python-dateutil==2.8.0
 pytorch-ignite==0.2.0
 pytz==2019.1
-PyYAML==5.1
+PyYAML==5.4
 regex==2019.4.14
 requests==2.22.0
 responses==0.10.6
